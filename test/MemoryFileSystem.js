@@ -1,6 +1,8 @@
 var bl = require("bl");
 var should = require("should");
-var MemoryFileSystem = require("../lib/MemoryFileSystem");
+var MemoryFile = require("../lib/MemoryFileSystem.js").MemoryFile;
+var MemoryDir = require("../lib/MemoryFileSystem.js").MemoryDir;
+var MemoryFileSystem = require("../lib/MemoryFileSystem").MemoryFileSystem;
 
 describe("directory", function() {
 	it("should have a empty root directory as startup", function(done) {
@@ -215,7 +217,7 @@ describe("async", function() {
 				isCalled = true;
 				done();
 			});
-			should(isCalled).eql(false);
+			should(isCalled).be.eql(false);
 		});
 	});
 	["mkdir", "readFile"].forEach(function(methodName) {
@@ -413,26 +415,20 @@ describe("os", function() {
 
 	beforeEach(function() {
 		fileSystem = new MemoryFileSystem({
-			"": true,
-			a: {
-				"": true,
-				index: new Buffer("1"), // /a/index
-				dir: {
-					"": true,
-					index: new Buffer("2") // /a/dir/index
-				}
-			},
-			"C:": {
-				"": true,
-				a: {
-					"": true,
-					index: new Buffer("3"),  // C:\files\index
-					dir: {
-						"": true,
-						index: new Buffer("4")  // C:\files\a\index
-					}
-				}
-			}
+			a: new MemoryDir({
+				index: new MemoryFile(new Buffer("1")), // /a/index
+				dir: new MemoryDir({
+					index: new MemoryFile(new Buffer("2")) // a/dir/index
+				})
+			}),
+			"C:": new MemoryDir({
+				a: new MemoryDir({
+					index: new MemoryFile(new Buffer("3")), // C:\a\index
+					dir: new MemoryDir({
+						index: new MemoryFile(new Buffer("4")) // C:\a\dir\index
+					})
+				})
+			})
 		});
 	});
 
