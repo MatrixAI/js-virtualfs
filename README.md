@@ -1,23 +1,15 @@
-# memory-fs (with stat metadata!)
+# VirtualFS
 
-A simple in-memory filesystem. Holds data in a javascript object. This is forked from https://github.com/webpack/memory-fs It adds stat metadata to each file and directory created within the filesystem. This however means it is not a drop in replacement due to changing from single export to multiple export, and the data parameter of `MemoryFileSystem` constructor. However everything else remains the same, and if you need extra stat data, then you can use this. This package will be maintained as long as the Polykey project is maintained. All tests are passing in this fork.
+VirtualFS is a fork of https://github.com/webpack/memory-fs. It adds stat metadata and symlink support while removing all the Windows support. It strives to be posix compatible, but it is not fully the same as a real Unix filesystem.
 
-``` javascript
-var MemoryFileSystem = require("memory-fs").MemoryFileSystem;
-var fs = new MemoryFileSystem();
+This package will be maintained as long as the Polykey project is maintained. All tests are passing in this fork.
 
-fs.mkdirpSync("/a/test/dir");
-fs.writeFileSync("/a/test/dir/file.txt", "Hello World");
-fs.readFileSync("/a/test/dir/file.txt"); // returns Buffer("Hello World")
+---
 
-// Async variants too
-fs.unlink("/a/test/dir/file.txt", function(err) {
-	// ...
-});
+Todo:
 
-fs.readdirSync("/a/test"); // returns ["dir"]
-fs.statSync("/a/test/dir").isDirectory(); // returns true
-fs.rmdirSync("/a/test/dir");
+Properly model and implement the MAC times.
 
-fs.mkdirpSync("C:\\use\\windows\\style\\paths");
-```
+Properly model and implement inodes (and hence support hardlinks).
+
+Make a more comprehensive and granular test suite.

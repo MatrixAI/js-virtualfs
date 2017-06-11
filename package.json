@@ -1,7 +1,7 @@
 {
-  "name": "memory-fs",
-  "version": "0.4.1",
-  "description": "A simple in-memory filesystem. Holds data in a javascript object.",
+  "name": "VirtualFS",
+  "version": "0.0.1",
+  "description": "In-memory filesystem implemented in Javascript for Node.js",
   "main": "lib/MemoryFileSystem.js",
   "directories": {
     "test": "test"
@@ -19,18 +19,14 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/webpack/memory-fs.git"
+    "url": "https://github.com/MatrixAI/VirtualFS.git"
   },
   "keywords": [
     "fs",
     "memory"
   ],
-  "author": "Tobias Koppers @sokra",
+  "author": "Roger Qiu",
   "license": "MIT",
-  "bugs": {
-    "url": "https://github.com/webpack/memory-fs/issues"
-  },
-  "homepage": "https://github.com/webpack/memory-fs",
   "devDependencies": {
     "bl": "^1.0.0",
     "codecov.io": "^0.1.4",
