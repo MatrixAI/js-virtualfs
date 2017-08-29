@@ -1,0 +1,7 @@
+/.babelrc
+/.flowconfig
+/.editorconfig
+/rollup.config.js
+/shell.nix
+/doc
+/test
