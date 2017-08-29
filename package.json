@@ -1,6 +1,6 @@
 {
   "name": "virtualfs",
-  "version": "0.0.1",
+  "version": "1.0.0",
   "description": "In-memory fs replacement",
   "keywords": [
     "fs",
