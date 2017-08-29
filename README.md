@@ -16,6 +16,13 @@ It completely reworks the architecture to include:
 
 This package will be maintained as long as the Polykey project is maintained. All tests are passing in this fork.
 
+Documentation
+--------------
+
+Documentation is located in the `doc` folder. You can also view the [rendered HTML](https://cdn.rawgit.com/MatrixAI/js-virtualfs/23a494a0/doc/index.html).
+
+The VirtualFS API does not need to be documented here. Just refer to Node's FS API https://nodejs.org/api/fs.html.
+
 Development
 -------------
 
