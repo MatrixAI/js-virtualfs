@@ -1,19 +1,13 @@
-'use strict';
-
-Object.defineProperty(exports, '__esModule', { value: true });
-
-function _interopDefault (ex) { return (ex && (typeof ex === 'object') && 'default' in ex) ? ex['default'] : ex; }
-
-var _Array$from = _interopDefault(require('babel-runtime/core-js/array/from'));
-var _Set = _interopDefault(require('babel-runtime/core-js/set'));
-var _extends = _interopDefault(require('babel-runtime/helpers/extends'));
-var _setImmediate = _interopDefault(require('babel-runtime/core-js/set-immediate'));
-var buffer = require('buffer');
-var pathBrowserify = require('path-browserify');
-var errno = _interopDefault(require('errno'));
-var _Map = _interopDefault(require('babel-runtime/core-js/map'));
-var Counter = _interopDefault(require('resource-counter'));
-var readableStream = require('readable-stream');
+import _Array$from from 'babel-runtime/core-js/array/from';
+import _Set from 'babel-runtime/core-js/set';
+import _extends from 'babel-runtime/helpers/extends';
+import _setImmediate from 'babel-runtime/core-js/set-immediate';
+import { Buffer } from 'buffer';
+import { join } from 'path-browserify';
+import errno from 'errno';
+import _Map from 'babel-runtime/core-js/map';
+import Counter from 'resource-counter';
+import { Readable, Writable } from 'readable-stream';
 
 var constants = {
   O_RDONLY: 0,
@@ -346,7 +340,7 @@ class Symlink extends INode {
     super({
       ino: props.ino,
       mode: constants.S_IFLNK,
-      size: buffer.Buffer.from(props.link).byteLength
+      size: Buffer.from(props.link).byteLength
     }, iNodeMgr);
     this._link = props.link;
   }
@@ -543,14 +537,14 @@ class FileDescriptor {
         const metadata = iNode.getMetadata();
         if ((this.getFlags() | extraFlags) & constants.O_APPEND) {
           currentPosition = data.length;
-          data = buffer.Buffer.concat([data, buffer$$1]);
+          data = Buffer.concat([data, buffer$$1]);
           bytesWritten = buffer$$1.length;
         } else {
           currentPosition = Math.min(data.length, currentPosition);
           const overwrittenLength = data.length - currentPosition;
           const extendedLength = buffer$$1.length - overwrittenLength;
           if (extendedLength > 0) {
-            data = buffer.Buffer.concat([data, buffer.Buffer.allocUnsafe(extendedLength)]);
+            data = Buffer.concat([data, Buffer.allocUnsafe(extendedLength)]);
           }
           bytesWritten = buffer$$1.copy(data, currentPosition);
         }
@@ -581,11 +575,11 @@ class FileDescriptor {
         const metadata = iNode.getMetadata();
         let newData;
         if (len > data.length) {
-          newData = buffer.Buffer.alloc(len);
+          newData = Buffer.alloc(len);
           data.copy(newData, 0, 0, data.length);
           iNode.setData(newData);
         } else if (len < data.length) {
-          newData = buffer.Buffer.allocUnsafe(len);
+          newData = Buffer.allocUnsafe(len);
           data.copy(newData, 0, 0, len);
           iNode.setData(newData);
         } else {
@@ -655,7 +649,7 @@ class FileDescriptorManager {
  * Class representing a ReadStream.
  * @extends Readable
  */
-class ReadStream extends readableStream.Readable {
+class ReadStream extends Readable {
 
   /**
    * Creates ReadStream.
@@ -782,7 +776,7 @@ class ReadStream extends readableStream.Readable {
  * Class representing a WriteStream.
  * @extends Writable
  */
-class WriteStream extends readableStream.Writable {
+class WriteStream extends Writable {
 
   /**
    * Creates WriteStream.
@@ -858,7 +852,7 @@ class WriteStream extends readableStream.Writable {
    * @private
    */
   _writev(chunks, cb) {
-    this._write(buffer.Buffer.concat(chunks.map(chunk => chunk.chunk)), undefined, cb);
+    this._write(Buffer.concat(chunks.map(chunk => chunk.chunk)), undefined, cb);
     return;
   }
 
@@ -1122,7 +1116,7 @@ class VirtualFS {
           activeSymlinks.add(target);
         }
         pathStack.pop();
-        const symlink = pathBrowserify.join(target.getLink(), parse.rest);
+        const symlink = join(target.getLink(), parse.rest);
         if (symlink[0] === '/') {
           return this._navigate(symlink, resolveLastLink, activeSymlinks);
         } else {
@@ -1176,8 +1170,8 @@ class VirtualFS {
 
   appendFileSync(file, data = 'undefined', options) {
     options = this._getOptions({ encoding: 'utf8', flag: 'a' }, options);
-    if (!(data instanceof buffer.Buffer)) {
-      data = buffer.Buffer.from(data.toString(), options.encoding);
+    if (!(data instanceof Buffer)) {
+      data = Buffer.from(data.toString(), options.encoding);
     }
     let fdIndex;
     let fd;
@@ -1578,9 +1572,9 @@ class VirtualFS {
       try {
         this.mkdirSync(pathS);
         if (options.encoding === 'buffer') {
-          return buffer.Buffer.from(pathS);
+          return Buffer.from(pathS);
         } else {
-          return buffer.Buffer.from(pathS).toString(options.encoding);
+          return Buffer.from(pathS).toString(options.encoding);
         }
       } catch (e) {
         if (e.code !== errno.code.EEXIST) {
@@ -1657,7 +1651,7 @@ class VirtualFS {
       // O_CREAT only applies if there's a left over name without any remaining path
       if (navigated.name && !navigated.remaining && flags & constants.O_CREAT) {
         // always creates a regular file
-        const index = this._inodeMgr.createINode(File, { data: buffer.Buffer.alloc(0) });
+        const index = this._inodeMgr.createINode(File, { data: Buffer.alloc(0) });
         navigated.dir.addEntry(navigated.name, index);
         target = this._inodeMgr.getINode(index);
       } else {
@@ -1678,7 +1672,7 @@ class VirtualFS {
       }
       // must truncate a file if O_TRUNC
       if (flags & constants.O_TRUNC && target instanceof File && flags & (constants.O_WRONLY | constants.O_RDWR)) {
-        target.setData(buffer.Buffer.alloc(0));
+        target.setData(Buffer.alloc(0));
       }
     }
     return this._fdMgr.createFd(target, flags).index;
@@ -1736,9 +1730,9 @@ class VirtualFS {
     }
     return _Array$from(navigated.target.getEntries().keys()).filter(name => name !== '.' && name !== '..').map(name => {
       if (options.encoding === 'buffer') {
-        return buffer.Buffer.from(name);
+        return Buffer.from(name);
       } else {
-        return buffer.Buffer.from(name).toString(options.encoding);
+        return Buffer.from(name).toString(options.encoding);
       }
     });
   }
@@ -1774,7 +1768,7 @@ class VirtualFS {
     // so instead we cheat less by getting the full length minus the fd position
     const bufferLength = fd.getINode().getData().length;
     const fdPosition = fd.getPos();
-    const buffer$$1 = buffer.Buffer.allocUnsafe(bufferLength - fdPosition);
+    const buffer$$1 = Buffer.allocUnsafe(bufferLength - fdPosition);
     fd.read(buffer$$1);
     if (fdIndex !== undefined) this.closeSync(fdIndex);
     return options.encoding ? buffer$$1.toString(options.encoding) : buffer$$1;
@@ -1799,9 +1793,9 @@ class VirtualFS {
     }
     const link = target.getLink();
     if (options.encoding === 'buffer') {
-      return buffer.Buffer.from(link);
+      return Buffer.from(link);
     } else {
-      return buffer.Buffer.from(link).toString(options.encoding);
+      return Buffer.from(link).toString(options.encoding);
     }
   }
 
@@ -1820,9 +1814,9 @@ class VirtualFS {
       throw new VirtualFSError(errno.code.ENOENT, pathS);
     }
     if (options.encoding === 'buffer') {
-      return buffer.Buffer.from(navigated.path);
+      return Buffer.from(navigated.path);
     } else {
-      return buffer.Buffer.from(navigated.path).toString(options.encoding);
+      return Buffer.from(navigated.path).toString(options.encoding);
     }
   }
 
@@ -2043,7 +2037,7 @@ class VirtualFS {
       throw new VirtualFSError(errno.code.EBADF, null, null, 'write');
     }
     let buffer$$1;
-    if (data instanceof buffer.Buffer) {
+    if (data instanceof Buffer) {
       if (offsetOrPos < 0 || offsetOrPos > data.length) {
         throw new RangeError('Offset is out of bounds');
       }
@@ -2053,7 +2047,7 @@ class VirtualFS {
       buffer$$1 = data.slice(offsetOrPos, offsetOrPos + lengthOrEncoding);
     } else {
       position = offsetOrPos;
-      buffer$$1 = buffer.Buffer.from(data.toString(), lengthOrEncoding);
+      buffer$$1 = Buffer.from(data.toString(), lengthOrEncoding);
     }
     try {
       return fd.write(buffer$$1, position);
@@ -2083,7 +2077,7 @@ class VirtualFS {
     }
     let buffer$$1;
     if (typeof data === 'string') {
-      buffer$$1 = buffer.Buffer.from(data, options.encoding);
+      buffer$$1 = Buffer.from(data, options.encoding);
     } else {
       buffer$$1 = data;
     }
@@ -2098,5 +2092,11 @@ class VirtualFS {
 
 }
 
-exports.VirtualFS = VirtualFS;
-exports.VirtualFSError = VirtualFSError;
+/** @module VirtualFS */
+
+// singleton version of VirtualFS
+// useful for sharing a single VirtualFS instance across modules
+// without directly passing VirtualFS
+var VirtualFSSingle = new VirtualFS();
+
+export { VirtualFS, VirtualFSError, VirtualFSSingle, Stat, File, Directory, Symlink, FileDescriptor, ReadStream, WriteStream, constants };

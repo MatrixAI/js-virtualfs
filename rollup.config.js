@@ -7,9 +7,9 @@ const packageJson = JSON.parse(fs.readFileSync('./package.json', 'utf8'));
 
 export default [
   {
-    input: 'lib/VirtualFS.js',
+    input: 'lib/index.js',
     output: {
-      file: 'dist/VirtualFS.es.js',
+      file: 'dist/index.node.es.js',
       format: 'es'
     },
     external: (id) => {
@@ -37,9 +37,9 @@ export default [
     ]
   },
   {
-    input: 'lib/VirtualFS.js',
+    input: 'lib/index.js',
     output: {
-      file: 'dist/VirtualFS.cjs.js',
+      file: 'dist/index.node.cjs.js',
       format: 'cjs'
     },
     external: (id) => {
@@ -67,9 +67,9 @@ export default [
     ]
   },
   {
-    input: 'lib/VirtualFS.js',
+    input: 'lib/index.js',
     output: {
-      file: 'dist/VirtualFS-browser.js',
+      file: 'dist/index.browser.umd.js',
       format: 'umd',
       name: 'VirtualFS'
     },
