@@ -6,3 +6,7 @@
 [libs]
 
 [options]
+experimental.strict_call_arity=false
+
+[lints]
+all=warn
