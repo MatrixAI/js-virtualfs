@@ -14,6 +14,7 @@ export default [
     },
     external: (id) => {
       return Object.keys(packageJson.dependencies)
+        .concat(Object.keys(packageJson.devDependencies))
         .map((dep) => new RegExp('^' + dep))
         .concat([/^babel-runtime/])
         .some((pattern) => pattern.test(id));
@@ -44,6 +45,7 @@ export default [
     },
     external: (id) => {
       return Object.keys(packageJson.dependencies)
+        .concat(Object.keys(packageJson.devDependencies))
         .map((dep) => new RegExp('^' + dep))
         .concat([/^babel-runtime/])
         .some((pattern) => pattern.test(id));
