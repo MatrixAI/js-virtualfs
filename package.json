@@ -20,7 +20,7 @@
     "doc": "documentation build ./lib/** -f html -o ./doc",
     "rollup": "rollup --config",
     "dos2unix": "dos2unix dist/*",
-    "build": "npm test && npm run rollup && npm run dos2unix"
+    "build": "npm test && npm run doc && npm run rollup && npm run dos2unix"
   },
   "ava": {
     "require": "babel-register",
