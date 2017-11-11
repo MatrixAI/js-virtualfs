@@ -3747,7 +3747,40 @@ process.umask = function() { return 0; };
 
 var browser_1 = browser.nextTick;
 
-var pathBrowserify = createCommonjsModule(function (module, exports) {
+var isBufferBrowser = function isBuffer(arg) {
+  return arg && typeof arg === 'object'
+    && typeof arg.copy === 'function'
+    && typeof arg.fill === 'function'
+    && typeof arg.readUInt8 === 'function';
+};
+
+var inherits_browser = createCommonjsModule(function (module) {
+if (typeof Object.create === 'function') {
+  // implementation from standard node.js 'util' module
+  module.exports = function inherits(ctor, superCtor) {
+    ctor.super_ = superCtor;
+    ctor.prototype = Object.create(superCtor.prototype, {
+      constructor: {
+        value: ctor,
+        enumerable: false,
+        writable: true,
+        configurable: true
+      }
+    });
+  };
+} else {
+  // old school shim for old browsers
+  module.exports = function inherits(ctor, superCtor) {
+    ctor.super_ = superCtor;
+    var TempCtor = function () {};
+    TempCtor.prototype = superCtor.prototype;
+    ctor.prototype = new TempCtor();
+    ctor.prototype.constructor = ctor;
+  };
+}
+});
+
+var util = createCommonjsModule(function (module, exports) {
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -3769,47 +3802,1026 @@ var pathBrowserify = createCommonjsModule(function (module, exports) {
 // OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
 // USE OR OTHER DEALINGS IN THE SOFTWARE.
 
+var formatRegExp = /%[sdj%]/g;
+exports.format = function(f) {
+  if (!isString(f)) {
+    var objects = [];
+    for (var i = 0; i < arguments.length; i++) {
+      objects.push(inspect(arguments[i]));
+    }
+    return objects.join(' ');
+  }
+
+  var i = 1;
+  var args = arguments;
+  var len = args.length;
+  var str = String(f).replace(formatRegExp, function(x) {
+    if (x === '%%') return '%';
+    if (i >= len) return x;
+    switch (x) {
+      case '%s': return String(args[i++]);
+      case '%d': return Number(args[i++]);
+      case '%j':
+        try {
+          return JSON.stringify(args[i++]);
+        } catch (_) {
+          return '[Circular]';
+        }
+      default:
+        return x;
+    }
+  });
+  for (var x = args[i]; i < len; x = args[++i]) {
+    if (isNull(x) || !isObject(x)) {
+      str += ' ' + x;
+    } else {
+      str += ' ' + inspect(x);
+    }
+  }
+  return str;
+};
+
+
+// Mark that a method should not be used.
+// Returns a modified function which warns once by default.
+// If --no-deprecation is set, then it is a no-op.
+exports.deprecate = function(fn, msg) {
+  // Allow for deprecating things in the process of starting up.
+  if (isUndefined(commonjsGlobal.process)) {
+    return function() {
+      return exports.deprecate(fn, msg).apply(this, arguments);
+    };
+  }
+
+  if (process.noDeprecation === true) {
+    return fn;
+  }
+
+  var warned = false;
+  function deprecated() {
+    if (!warned) {
+      if (process.throwDeprecation) {
+        throw new Error(msg);
+      } else if (process.traceDeprecation) {
+        console.trace(msg);
+      } else {
+        console.error(msg);
+      }
+      warned = true;
+    }
+    return fn.apply(this, arguments);
+  }
+
+  return deprecated;
+};
+
+
+var debugs = {};
+var debugEnviron;
+exports.debuglog = function(set) {
+  if (isUndefined(debugEnviron))
+    debugEnviron = process.env.NODE_DEBUG || '';
+  set = set.toUpperCase();
+  if (!debugs[set]) {
+    if (new RegExp('\\b' + set + '\\b', 'i').test(debugEnviron)) {
+      var pid = process.pid;
+      debugs[set] = function() {
+        var msg = exports.format.apply(exports, arguments);
+        console.error('%s %d: %s', set, pid, msg);
+      };
+    } else {
+      debugs[set] = function() {};
+    }
+  }
+  return debugs[set];
+};
+
+
+/**
+ * Echos the value of a value. Trys to print the value out
+ * in the best way possible given the different types.
+ *
+ * @param {Object} obj The object to print out.
+ * @param {Object} opts Optional options object that alters the output.
+ */
+/* legacy: obj, showHidden, depth, colors*/
+function inspect(obj, opts) {
+  // default options
+  var ctx = {
+    seen: [],
+    stylize: stylizeNoColor
+  };
+  // legacy...
+  if (arguments.length >= 3) ctx.depth = arguments[2];
+  if (arguments.length >= 4) ctx.colors = arguments[3];
+  if (isBoolean(opts)) {
+    // legacy...
+    ctx.showHidden = opts;
+  } else if (opts) {
+    // got an "options" object
+    exports._extend(ctx, opts);
+  }
+  // set default options
+  if (isUndefined(ctx.showHidden)) ctx.showHidden = false;
+  if (isUndefined(ctx.depth)) ctx.depth = 2;
+  if (isUndefined(ctx.colors)) ctx.colors = false;
+  if (isUndefined(ctx.customInspect)) ctx.customInspect = true;
+  if (ctx.colors) ctx.stylize = stylizeWithColor;
+  return formatValue(ctx, obj, ctx.depth);
+}
+exports.inspect = inspect;
+
+
+// http://en.wikipedia.org/wiki/ANSI_escape_code#graphics
+inspect.colors = {
+  'bold' : [1, 22],
+  'italic' : [3, 23],
+  'underline' : [4, 24],
+  'inverse' : [7, 27],
+  'white' : [37, 39],
+  'grey' : [90, 39],
+  'black' : [30, 39],
+  'blue' : [34, 39],
+  'cyan' : [36, 39],
+  'green' : [32, 39],
+  'magenta' : [35, 39],
+  'red' : [31, 39],
+  'yellow' : [33, 39]
+};
+
+// Don't use 'blue' not visible on cmd.exe
+inspect.styles = {
+  'special': 'cyan',
+  'number': 'yellow',
+  'boolean': 'yellow',
+  'undefined': 'grey',
+  'null': 'bold',
+  'string': 'green',
+  'date': 'magenta',
+  // "name": intentionally not styling
+  'regexp': 'red'
+};
+
+
+function stylizeWithColor(str, styleType) {
+  var style = inspect.styles[styleType];
+
+  if (style) {
+    return '\u001b[' + inspect.colors[style][0] + 'm' + str +
+           '\u001b[' + inspect.colors[style][1] + 'm';
+  } else {
+    return str;
+  }
+}
+
+
+function stylizeNoColor(str, styleType) {
+  return str;
+}
+
+
+function arrayToHash(array) {
+  var hash = {};
+
+  array.forEach(function(val, idx) {
+    hash[val] = true;
+  });
+
+  return hash;
+}
+
+
+function formatValue(ctx, value, recurseTimes) {
+  // Provide a hook for user-specified inspect functions.
+  // Check that value is an object with an inspect function on it
+  if (ctx.customInspect &&
+      value &&
+      isFunction(value.inspect) &&
+      // Filter out the util module, it's inspect function is special
+      value.inspect !== exports.inspect &&
+      // Also filter out any prototype objects using the circular check.
+      !(value.constructor && value.constructor.prototype === value)) {
+    var ret = value.inspect(recurseTimes, ctx);
+    if (!isString(ret)) {
+      ret = formatValue(ctx, ret, recurseTimes);
+    }
+    return ret;
+  }
+
+  // Primitive types cannot have properties
+  var primitive = formatPrimitive(ctx, value);
+  if (primitive) {
+    return primitive;
+  }
+
+  // Look up the keys of the object.
+  var keys = Object.keys(value);
+  var visibleKeys = arrayToHash(keys);
+
+  if (ctx.showHidden) {
+    keys = Object.getOwnPropertyNames(value);
+  }
+
+  // IE doesn't make error fields non-enumerable
+  // http://msdn.microsoft.com/en-us/library/ie/dww52sbt(v=vs.94).aspx
+  if (isError(value)
+      && (keys.indexOf('message') >= 0 || keys.indexOf('description') >= 0)) {
+    return formatError(value);
+  }
+
+  // Some type of object without properties can be shortcutted.
+  if (keys.length === 0) {
+    if (isFunction(value)) {
+      var name = value.name ? ': ' + value.name : '';
+      return ctx.stylize('[Function' + name + ']', 'special');
+    }
+    if (isRegExp(value)) {
+      return ctx.stylize(RegExp.prototype.toString.call(value), 'regexp');
+    }
+    if (isDate(value)) {
+      return ctx.stylize(Date.prototype.toString.call(value), 'date');
+    }
+    if (isError(value)) {
+      return formatError(value);
+    }
+  }
+
+  var base = '', array = false, braces = ['{', '}'];
+
+  // Make Array say that they are Array
+  if (isArray(value)) {
+    array = true;
+    braces = ['[', ']'];
+  }
+
+  // Make functions say that they are functions
+  if (isFunction(value)) {
+    var n = value.name ? ': ' + value.name : '';
+    base = ' [Function' + n + ']';
+  }
+
+  // Make RegExps say that they are RegExps
+  if (isRegExp(value)) {
+    base = ' ' + RegExp.prototype.toString.call(value);
+  }
+
+  // Make dates with properties first say the date
+  if (isDate(value)) {
+    base = ' ' + Date.prototype.toUTCString.call(value);
+  }
+
+  // Make error with message first say the error
+  if (isError(value)) {
+    base = ' ' + formatError(value);
+  }
+
+  if (keys.length === 0 && (!array || value.length == 0)) {
+    return braces[0] + base + braces[1];
+  }
+
+  if (recurseTimes < 0) {
+    if (isRegExp(value)) {
+      return ctx.stylize(RegExp.prototype.toString.call(value), 'regexp');
+    } else {
+      return ctx.stylize('[Object]', 'special');
+    }
+  }
+
+  ctx.seen.push(value);
+
+  var output;
+  if (array) {
+    output = formatArray(ctx, value, recurseTimes, visibleKeys, keys);
+  } else {
+    output = keys.map(function(key) {
+      return formatProperty(ctx, value, recurseTimes, visibleKeys, key, array);
+    });
+  }
+
+  ctx.seen.pop();
+
+  return reduceToSingleString(output, base, braces);
+}
+
+
+function formatPrimitive(ctx, value) {
+  if (isUndefined(value))
+    return ctx.stylize('undefined', 'undefined');
+  if (isString(value)) {
+    var simple = '\'' + JSON.stringify(value).replace(/^"|"$/g, '')
+                                             .replace(/'/g, "\\'")
+                                             .replace(/\\"/g, '"') + '\'';
+    return ctx.stylize(simple, 'string');
+  }
+  if (isNumber(value))
+    return ctx.stylize('' + value, 'number');
+  if (isBoolean(value))
+    return ctx.stylize('' + value, 'boolean');
+  // For some reason typeof null is "object", so special case here.
+  if (isNull(value))
+    return ctx.stylize('null', 'null');
+}
+
+
+function formatError(value) {
+  return '[' + Error.prototype.toString.call(value) + ']';
+}
+
+
+function formatArray(ctx, value, recurseTimes, visibleKeys, keys) {
+  var output = [];
+  for (var i = 0, l = value.length; i < l; ++i) {
+    if (hasOwnProperty(value, String(i))) {
+      output.push(formatProperty(ctx, value, recurseTimes, visibleKeys,
+          String(i), true));
+    } else {
+      output.push('');
+    }
+  }
+  keys.forEach(function(key) {
+    if (!key.match(/^\d+$/)) {
+      output.push(formatProperty(ctx, value, recurseTimes, visibleKeys,
+          key, true));
+    }
+  });
+  return output;
+}
+
+
+function formatProperty(ctx, value, recurseTimes, visibleKeys, key, array) {
+  var name, str, desc;
+  desc = Object.getOwnPropertyDescriptor(value, key) || { value: value[key] };
+  if (desc.get) {
+    if (desc.set) {
+      str = ctx.stylize('[Getter/Setter]', 'special');
+    } else {
+      str = ctx.stylize('[Getter]', 'special');
+    }
+  } else {
+    if (desc.set) {
+      str = ctx.stylize('[Setter]', 'special');
+    }
+  }
+  if (!hasOwnProperty(visibleKeys, key)) {
+    name = '[' + key + ']';
+  }
+  if (!str) {
+    if (ctx.seen.indexOf(desc.value) < 0) {
+      if (isNull(recurseTimes)) {
+        str = formatValue(ctx, desc.value, null);
+      } else {
+        str = formatValue(ctx, desc.value, recurseTimes - 1);
+      }
+      if (str.indexOf('\n') > -1) {
+        if (array) {
+          str = str.split('\n').map(function(line) {
+            return '  ' + line;
+          }).join('\n').substr(2);
+        } else {
+          str = '\n' + str.split('\n').map(function(line) {
+            return '   ' + line;
+          }).join('\n');
+        }
+      }
+    } else {
+      str = ctx.stylize('[Circular]', 'special');
+    }
+  }
+  if (isUndefined(name)) {
+    if (array && key.match(/^\d+$/)) {
+      return str;
+    }
+    name = JSON.stringify('' + key);
+    if (name.match(/^"([a-zA-Z_][a-zA-Z_0-9]*)"$/)) {
+      name = name.substr(1, name.length - 2);
+      name = ctx.stylize(name, 'name');
+    } else {
+      name = name.replace(/'/g, "\\'")
+                 .replace(/\\"/g, '"')
+                 .replace(/(^"|"$)/g, "'");
+      name = ctx.stylize(name, 'string');
+    }
+  }
+
+  return name + ': ' + str;
+}
+
+
+function reduceToSingleString(output, base, braces) {
+  var numLinesEst = 0;
+  var length = output.reduce(function(prev, cur) {
+    numLinesEst++;
+    if (cur.indexOf('\n') >= 0) numLinesEst++;
+    return prev + cur.replace(/\u001b\[\d\d?m/g, '').length + 1;
+  }, 0);
+
+  if (length > 60) {
+    return braces[0] +
+           (base === '' ? '' : base + '\n ') +
+           ' ' +
+           output.join(',\n  ') +
+           ' ' +
+           braces[1];
+  }
+
+  return braces[0] + base + ' ' + output.join(', ') + ' ' + braces[1];
+}
+
+
+// NOTE: These type checking functions intentionally don't use `instanceof`
+// because it is fragile and can be easily faked with `Object.create()`.
+function isArray(ar) {
+  return Array.isArray(ar);
+}
+exports.isArray = isArray;
+
+function isBoolean(arg) {
+  return typeof arg === 'boolean';
+}
+exports.isBoolean = isBoolean;
+
+function isNull(arg) {
+  return arg === null;
+}
+exports.isNull = isNull;
+
+function isNullOrUndefined(arg) {
+  return arg == null;
+}
+exports.isNullOrUndefined = isNullOrUndefined;
+
+function isNumber(arg) {
+  return typeof arg === 'number';
+}
+exports.isNumber = isNumber;
+
+function isString(arg) {
+  return typeof arg === 'string';
+}
+exports.isString = isString;
+
+function isSymbol(arg) {
+  return typeof arg === 'symbol';
+}
+exports.isSymbol = isSymbol;
+
+function isUndefined(arg) {
+  return arg === void 0;
+}
+exports.isUndefined = isUndefined;
+
+function isRegExp(re) {
+  return isObject(re) && objectToString(re) === '[object RegExp]';
+}
+exports.isRegExp = isRegExp;
+
+function isObject(arg) {
+  return typeof arg === 'object' && arg !== null;
+}
+exports.isObject = isObject;
+
+function isDate(d) {
+  return isObject(d) && objectToString(d) === '[object Date]';
+}
+exports.isDate = isDate;
+
+function isError(e) {
+  return isObject(e) &&
+      (objectToString(e) === '[object Error]' || e instanceof Error);
+}
+exports.isError = isError;
+
+function isFunction(arg) {
+  return typeof arg === 'function';
+}
+exports.isFunction = isFunction;
+
+function isPrimitive(arg) {
+  return arg === null ||
+         typeof arg === 'boolean' ||
+         typeof arg === 'number' ||
+         typeof arg === 'string' ||
+         typeof arg === 'symbol' ||  // ES6 symbol
+         typeof arg === 'undefined';
+}
+exports.isPrimitive = isPrimitive;
+
+exports.isBuffer = isBufferBrowser;
+
+function objectToString(o) {
+  return Object.prototype.toString.call(o);
+}
+
+
+function pad(n) {
+  return n < 10 ? '0' + n.toString(10) : n.toString(10);
+}
+
+
+var months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep',
+              'Oct', 'Nov', 'Dec'];
+
+// 26 Feb 16:19:34
+function timestamp() {
+  var d = new Date();
+  var time = [pad(d.getHours()),
+              pad(d.getMinutes()),
+              pad(d.getSeconds())].join(':');
+  return [d.getDate(), months[d.getMonth()], time].join(' ');
+}
+
+
+// log is just a thin wrapper to console.log that prepends a timestamp
+exports.log = function() {
+  console.log('%s - %s', timestamp(), exports.format.apply(exports, arguments));
+};
+
+
+/**
+ * Inherit the prototype methods from one constructor into another.
+ *
+ * The Function.prototype.inherits from lang.js rewritten as a standalone
+ * function (not on Function.prototype). NOTE: If this file is to be loaded
+ * during bootstrapping this function needs to be rewritten using some native
+ * functions as prototype setup using normal JavaScript does not work as
+ * expected during bootstrapping (see mirror.js in r114903).
+ *
+ * @param {function} ctor Constructor function which needs to inherit the
+ *     prototype.
+ * @param {function} superCtor Constructor function to inherit prototype from.
+ */
+exports.inherits = inherits_browser;
+
+exports._extend = function(origin, add) {
+  // Don't do anything if add isn't an object
+  if (!add || !isObject(add)) return origin;
+
+  var keys = Object.keys(add);
+  var i = keys.length;
+  while (i--) {
+    origin[keys[i]] = add[keys[i]];
+  }
+  return origin;
+};
+
+function hasOwnProperty(obj, prop) {
+  return Object.prototype.hasOwnProperty.call(obj, prop);
+}
+});
+
+var util_1 = util.format;
+var util_2 = util.deprecate;
+var util_3 = util.debuglog;
+var util_4 = util.inspect;
+var util_5 = util.isArray;
+var util_6 = util.isBoolean;
+var util_7 = util.isNull;
+var util_8 = util.isNullOrUndefined;
+var util_9 = util.isNumber;
+var util_10 = util.isString;
+var util_11 = util.isSymbol;
+var util_12 = util.isUndefined;
+var util_13 = util.isRegExp;
+var util_14 = util.isObject;
+var util_15 = util.isDate;
+var util_16 = util.isError;
+var util_17 = util.isFunction;
+var util_18 = util.isPrimitive;
+var util_19 = util.isBuffer;
+var util_20 = util.log;
+var util_21 = util.inherits;
+var util_22 = util._extend;
+
+var path = createCommonjsModule(function (module) {
+// Copyright Joyent, Inc. and other Node contributors.
+//
+// Permission is hereby granted, free of charge, to any person obtaining a
+// copy of this software and associated documentation files (the
+// "Software"), to deal in the Software without restriction, including
+// without limitation the rights to use, copy, modify, merge, publish,
+// distribute, sublicense, and/or sell copies of the Software, and to permit
+// persons to whom the Software is furnished to do so, subject to the
+// following conditions:
+//
+// The above copyright notice and this permission notice shall be included
+// in all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+// OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+// MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN
+// NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
+// DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
+// OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
+// USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+var isWindows = process.platform === 'win32';
+
+
+
 // resolves . and .. elements in a path array with directory names there
-// must be no slashes, empty elements, or device names (c:\) in the array
+// must be no slashes or device names (c:\) in the array
 // (so also no leading and trailing slashes - it does not distinguish
 // relative and absolute paths)
 function normalizeArray(parts, allowAboveRoot) {
-  // if the path tries to go above the root, `up` ends up > 0
-  var up = 0;
-  for (var i = parts.length - 1; i >= 0; i--) {
-    var last = parts[i];
-    if (last === '.') {
-      parts.splice(i, 1);
-    } else if (last === '..') {
-      parts.splice(i, 1);
-      up++;
-    } else if (up) {
-      parts.splice(i, 1);
-      up--;
+  var res = [];
+  for (var i = 0; i < parts.length; i++) {
+    var p = parts[i];
+
+    // ignore empty parts
+    if (!p || p === '.')
+      continue;
+
+    if (p === '..') {
+      if (res.length && res[res.length - 1] !== '..') {
+        res.pop();
+      } else if (allowAboveRoot) {
+        res.push('..');
+      }
+    } else {
+      res.push(p);
     }
   }
 
-  // if the path is allowed to go above the root, restore leading ..s
-  if (allowAboveRoot) {
-    for (; up--; up) {
-      parts.unshift('..');
-    }
-  }
-
-  return parts;
+  return res;
 }
+
+// returns an array with empty elements removed from either end of the input
+// array or the original array if no elements need to be removed
+function trimArray(arr) {
+  var lastIndex = arr.length - 1;
+  var start = 0;
+  for (; start <= lastIndex; start++) {
+    if (arr[start])
+      break;
+  }
+
+  var end = lastIndex;
+  for (; end >= 0; end--) {
+    if (arr[end])
+      break;
+  }
+
+  if (start === 0 && end === lastIndex)
+    return arr;
+  if (start > end)
+    return [];
+  return arr.slice(start, end + 1);
+}
+
+// Regex to split a windows path into three parts: [*, device, slash,
+// tail] windows-only
+var splitDeviceRe =
+    /^([a-zA-Z]:|[\\\/]{2}[^\\\/]+[\\\/]+[^\\\/]+)?([\\\/])?([\s\S]*?)$/;
+
+// Regex to split the tail part of the above into [*, dir, basename, ext]
+var splitTailRe =
+    /^([\s\S]*?)((?:\.{1,2}|[^\\\/]+?|)(\.[^.\/\\]*|))(?:[\\\/]*)$/;
+
+var win32 = {};
+
+// Function to split a filename into [root, dir, basename, ext]
+function win32SplitPath(filename) {
+  // Separate device+slash from tail
+  var result = splitDeviceRe.exec(filename),
+      device = (result[1] || '') + (result[2] || ''),
+      tail = result[3] || '';
+  // Split the tail into dir, basename and extension
+  var result2 = splitTailRe.exec(tail),
+      dir = result2[1],
+      basename = result2[2],
+      ext = result2[3];
+  return [device, dir, basename, ext];
+}
+
+function win32StatPath(path) {
+  var result = splitDeviceRe.exec(path),
+      device = result[1] || '',
+      isUnc = !!device && device[1] !== ':';
+  return {
+    device: device,
+    isUnc: isUnc,
+    isAbsolute: isUnc || !!result[2], // UNC paths are always absolute
+    tail: result[3]
+  };
+}
+
+function normalizeUNCRoot(device) {
+  return '\\\\' + device.replace(/^[\\\/]+/, '').replace(/[\\\/]+/g, '\\');
+}
+
+// path.resolve([from ...], to)
+win32.resolve = function() {
+  var resolvedDevice = '',
+      resolvedTail = '',
+      resolvedAbsolute = false;
+
+  for (var i = arguments.length - 1; i >= -1; i--) {
+    var path;
+    if (i >= 0) {
+      path = arguments[i];
+    } else if (!resolvedDevice) {
+      path = process.cwd();
+    } else {
+      // Windows has the concept of drive-specific current working
+      // directories. If we've resolved a drive letter but not yet an
+      // absolute path, get cwd for that drive. We're sure the device is not
+      // an unc path at this points, because unc paths are always absolute.
+      path = process.env['=' + resolvedDevice];
+      // Verify that a drive-local cwd was found and that it actually points
+      // to our drive. If not, default to the drive's root.
+      if (!path || path.substr(0, 3).toLowerCase() !==
+          resolvedDevice.toLowerCase() + '\\') {
+        path = resolvedDevice + '\\';
+      }
+    }
+
+    // Skip empty and invalid entries
+    if (!util.isString(path)) {
+      throw new TypeError('Arguments to path.resolve must be strings');
+    } else if (!path) {
+      continue;
+    }
+
+    var result = win32StatPath(path),
+        device = result.device,
+        isUnc = result.isUnc,
+        isAbsolute = result.isAbsolute,
+        tail = result.tail;
+
+    if (device &&
+        resolvedDevice &&
+        device.toLowerCase() !== resolvedDevice.toLowerCase()) {
+      // This path points to another device so it is not applicable
+      continue;
+    }
+
+    if (!resolvedDevice) {
+      resolvedDevice = device;
+    }
+    if (!resolvedAbsolute) {
+      resolvedTail = tail + '\\' + resolvedTail;
+      resolvedAbsolute = isAbsolute;
+    }
+
+    if (resolvedDevice && resolvedAbsolute) {
+      break;
+    }
+  }
+
+  // Convert slashes to backslashes when `resolvedDevice` points to an UNC
+  // root. Also squash multiple slashes into a single one where appropriate.
+  if (isUnc) {
+    resolvedDevice = normalizeUNCRoot(resolvedDevice);
+  }
+
+  // At this point the path should be resolved to a full absolute path,
+  // but handle relative paths to be safe (might happen when process.cwd()
+  // fails)
+
+  // Normalize the tail path
+  resolvedTail = normalizeArray(resolvedTail.split(/[\\\/]+/),
+                                !resolvedAbsolute).join('\\');
+
+  return (resolvedDevice + (resolvedAbsolute ? '\\' : '') + resolvedTail) ||
+         '.';
+};
+
+
+win32.normalize = function(path) {
+  var result = win32StatPath(path),
+      device = result.device,
+      isUnc = result.isUnc,
+      isAbsolute = result.isAbsolute,
+      tail = result.tail,
+      trailingSlash = /[\\\/]$/.test(tail);
+
+  // Normalize the tail path
+  tail = normalizeArray(tail.split(/[\\\/]+/), !isAbsolute).join('\\');
+
+  if (!tail && !isAbsolute) {
+    tail = '.';
+  }
+  if (tail && trailingSlash) {
+    tail += '\\';
+  }
+
+  // Convert slashes to backslashes when `device` points to an UNC root.
+  // Also squash multiple slashes into a single one where appropriate.
+  if (isUnc) {
+    device = normalizeUNCRoot(device);
+  }
+
+  return device + (isAbsolute ? '\\' : '') + tail;
+};
+
+
+win32.isAbsolute = function(path) {
+  return win32StatPath(path).isAbsolute;
+};
+
+win32.join = function() {
+  var paths = [];
+  for (var i = 0; i < arguments.length; i++) {
+    var arg = arguments[i];
+    if (!util.isString(arg)) {
+      throw new TypeError('Arguments to path.join must be strings');
+    }
+    if (arg) {
+      paths.push(arg);
+    }
+  }
+
+  var joined = paths.join('\\');
+
+  // Make sure that the joined path doesn't start with two slashes, because
+  // normalize() will mistake it for an UNC path then.
+  //
+  // This step is skipped when it is very clear that the user actually
+  // intended to point at an UNC path. This is assumed when the first
+  // non-empty string arguments starts with exactly two slashes followed by
+  // at least one more non-slash character.
+  //
+  // Note that for normalize() to treat a path as an UNC path it needs to
+  // have at least 2 components, so we don't filter for that here.
+  // This means that the user can use join to construct UNC paths from
+  // a server name and a share name; for example:
+  //   path.join('//server', 'share') -> '\\\\server\\share\')
+  if (!/^[\\\/]{2}[^\\\/]/.test(paths[0])) {
+    joined = joined.replace(/^[\\\/]{2,}/, '\\');
+  }
+
+  return win32.normalize(joined);
+};
+
+
+// path.relative(from, to)
+// it will solve the relative path from 'from' to 'to', for instance:
+// from = 'C:\\orandea\\test\\aaa'
+// to = 'C:\\orandea\\impl\\bbb'
+// The output of the function should be: '..\\..\\impl\\bbb'
+win32.relative = function(from, to) {
+  from = win32.resolve(from);
+  to = win32.resolve(to);
+
+  // windows is not case sensitive
+  var lowerFrom = from.toLowerCase();
+  var lowerTo = to.toLowerCase();
+
+  var toParts = trimArray(to.split('\\'));
+
+  var lowerFromParts = trimArray(lowerFrom.split('\\'));
+  var lowerToParts = trimArray(lowerTo.split('\\'));
+
+  var length = Math.min(lowerFromParts.length, lowerToParts.length);
+  var samePartsLength = length;
+  for (var i = 0; i < length; i++) {
+    if (lowerFromParts[i] !== lowerToParts[i]) {
+      samePartsLength = i;
+      break;
+    }
+  }
+
+  if (samePartsLength == 0) {
+    return to;
+  }
+
+  var outputParts = [];
+  for (var i = samePartsLength; i < lowerFromParts.length; i++) {
+    outputParts.push('..');
+  }
+
+  outputParts = outputParts.concat(toParts.slice(samePartsLength));
+
+  return outputParts.join('\\');
+};
+
+
+win32._makeLong = function(path) {
+  // Note: this will *probably* throw somewhere.
+  if (!util.isString(path))
+    return path;
+
+  if (!path) {
+    return '';
+  }
+
+  var resolvedPath = win32.resolve(path);
+
+  if (/^[a-zA-Z]\:\\/.test(resolvedPath)) {
+    // path is local filesystem path, which needs to be converted
+    // to long UNC path.
+    return '\\\\?\\' + resolvedPath;
+  } else if (/^\\\\[^?.]/.test(resolvedPath)) {
+    // path is network UNC path, which needs to be converted
+    // to long UNC path.
+    return '\\\\?\\UNC\\' + resolvedPath.substring(2);
+  }
+
+  return path;
+};
+
+
+win32.dirname = function(path) {
+  var result = win32SplitPath(path),
+      root = result[0],
+      dir = result[1];
+
+  if (!root && !dir) {
+    // No dirname whatsoever
+    return '.';
+  }
+
+  if (dir) {
+    // It has a dirname, strip trailing slash
+    dir = dir.substr(0, dir.length - 1);
+  }
+
+  return root + dir;
+};
+
+
+win32.basename = function(path, ext) {
+  var f = win32SplitPath(path)[2];
+  // TODO: make this comparison case-insensitive on windows?
+  if (ext && f.substr(-1 * ext.length) === ext) {
+    f = f.substr(0, f.length - ext.length);
+  }
+  return f;
+};
+
+
+win32.extname = function(path) {
+  return win32SplitPath(path)[3];
+};
+
+
+win32.format = function(pathObject) {
+  if (!util.isObject(pathObject)) {
+    throw new TypeError(
+        "Parameter 'pathObject' must be an object, not " + typeof pathObject
+    );
+  }
+
+  var root = pathObject.root || '';
+
+  if (!util.isString(root)) {
+    throw new TypeError(
+        "'pathObject.root' must be a string or undefined, not " +
+        typeof pathObject.root
+    );
+  }
+
+  var dir = pathObject.dir;
+  var base = pathObject.base || '';
+  if (!dir) {
+    return base;
+  }
+  if (dir[dir.length - 1] === win32.sep) {
+    return dir + base;
+  }
+  return dir + win32.sep + base;
+};
+
+
+win32.parse = function(pathString) {
+  if (!util.isString(pathString)) {
+    throw new TypeError(
+        "Parameter 'pathString' must be a string, not " + typeof pathString
+    );
+  }
+  var allParts = win32SplitPath(pathString);
+  if (!allParts || allParts.length !== 4) {
+    throw new TypeError("Invalid path '" + pathString + "'");
+  }
+  return {
+    root: allParts[0],
+    dir: allParts[0] + allParts[1].slice(0, -1),
+    base: allParts[2],
+    ext: allParts[3],
+    name: allParts[2].slice(0, allParts[2].length - allParts[3].length)
+  };
+};
+
+
+win32.sep = '\\';
+win32.delimiter = ';';
+
 
 // Split a filename into [root, dir, basename, ext], unix version
 // 'root' is just a slash, or nothing.
 var splitPathRe =
     /^(\/?|)([\s\S]*?)((?:\.{1,2}|[^\/]+?|)(\.[^.\/]*|))(?:[\/]*)$/;
-var splitPath = function(filename) {
+var posix = {};
+
+
+function posixSplitPath(filename) {
   return splitPathRe.exec(filename).slice(1);
-};
+}
+
 
 // path.resolve([from ...], to)
 // posix version
-exports.resolve = function() {
+posix.resolve = function() {
   var resolvedPath = '',
       resolvedAbsolute = false;
 
@@ -3817,37 +4829,34 @@ exports.resolve = function() {
     var path = (i >= 0) ? arguments[i] : process.cwd();
 
     // Skip empty and invalid entries
-    if (typeof path !== 'string') {
+    if (!util.isString(path)) {
       throw new TypeError('Arguments to path.resolve must be strings');
     } else if (!path) {
       continue;
     }
 
     resolvedPath = path + '/' + resolvedPath;
-    resolvedAbsolute = path.charAt(0) === '/';
+    resolvedAbsolute = path[0] === '/';
   }
 
   // At this point the path should be resolved to a full absolute path, but
   // handle relative paths to be safe (might happen when process.cwd() fails)
 
   // Normalize the path
-  resolvedPath = normalizeArray(filter(resolvedPath.split('/'), function(p) {
-    return !!p;
-  }), !resolvedAbsolute).join('/');
+  resolvedPath = normalizeArray(resolvedPath.split('/'),
+                                !resolvedAbsolute).join('/');
 
   return ((resolvedAbsolute ? '/' : '') + resolvedPath) || '.';
 };
 
 // path.normalize(path)
 // posix version
-exports.normalize = function(path) {
-  var isAbsolute = exports.isAbsolute(path),
-      trailingSlash = substr(path, -1) === '/';
+posix.normalize = function(path) {
+  var isAbsolute = posix.isAbsolute(path),
+      trailingSlash = path && path[path.length - 1] === '/';
 
   // Normalize the path
-  path = normalizeArray(filter(path.split('/'), function(p) {
-    return !!p;
-  }), !isAbsolute).join('/');
+  path = normalizeArray(path.split('/'), !isAbsolute).join('/');
 
   if (!path && !isAbsolute) {
     path = '.';
@@ -3860,45 +4869,38 @@ exports.normalize = function(path) {
 };
 
 // posix version
-exports.isAbsolute = function(path) {
+posix.isAbsolute = function(path) {
   return path.charAt(0) === '/';
 };
 
 // posix version
-exports.join = function() {
-  var paths = Array.prototype.slice.call(arguments, 0);
-  return exports.normalize(filter(paths, function(p, index) {
-    if (typeof p !== 'string') {
+posix.join = function() {
+  var path = '';
+  for (var i = 0; i < arguments.length; i++) {
+    var segment = arguments[i];
+    if (!util.isString(segment)) {
       throw new TypeError('Arguments to path.join must be strings');
     }
-    return p;
-  }).join('/'));
+    if (segment) {
+      if (!path) {
+        path += segment;
+      } else {
+        path += '/' + segment;
+      }
+    }
+  }
+  return posix.normalize(path);
 };
 
 
 // path.relative(from, to)
 // posix version
-exports.relative = function(from, to) {
-  from = exports.resolve(from).substr(1);
-  to = exports.resolve(to).substr(1);
+posix.relative = function(from, to) {
+  from = posix.resolve(from).substr(1);
+  to = posix.resolve(to).substr(1);
 
-  function trim(arr) {
-    var start = 0;
-    for (; start < arr.length; start++) {
-      if (arr[start] !== '') break;
-    }
-
-    var end = arr.length - 1;
-    for (; end >= 0; end--) {
-      if (arr[end] !== '') break;
-    }
-
-    if (start > end) return [];
-    return arr.slice(start, end - start + 1);
-  }
-
-  var fromParts = trim(from.split('/'));
-  var toParts = trim(to.split('/'));
+  var fromParts = trimArray(from.split('/'));
+  var toParts = trimArray(to.split('/'));
 
   var length = Math.min(fromParts.length, toParts.length);
   var samePartsLength = length;
@@ -3919,11 +4921,14 @@ exports.relative = function(from, to) {
   return outputParts.join('/');
 };
 
-exports.sep = '/';
-exports.delimiter = ':';
 
-exports.dirname = function(path) {
-  var result = splitPath(path),
+posix._makeLong = function(path) {
+  return path;
+};
+
+
+posix.dirname = function(path) {
+  var result = posixSplitPath(path),
       root = result[0],
       dir = result[1];
 
@@ -3941,8 +4946,8 @@ exports.dirname = function(path) {
 };
 
 
-exports.basename = function(path, ext) {
-  var f = splitPath(path)[2];
+posix.basename = function(path, ext) {
+  var f = posixSplitPath(path)[2];
   // TODO: make this comparison case-insensitive on windows?
   if (ext && f.substr(-1 * ext.length) === ext) {
     f = f.substr(0, f.length - ext.length);
@@ -3951,38 +4956,72 @@ exports.basename = function(path, ext) {
 };
 
 
-exports.extname = function(path) {
-  return splitPath(path)[3];
+posix.extname = function(path) {
+  return posixSplitPath(path)[3];
 };
 
-function filter (xs, f) {
-    if (xs.filter) return xs.filter(f);
-    var res = [];
-    for (var i = 0; i < xs.length; i++) {
-        if (f(xs[i], i, xs)) res.push(xs[i]);
-    }
-    return res;
-}
 
-// String.prototype.substr - negative index don't work in IE8
-var substr = 'ab'.substr(-1) === 'b'
-    ? function (str, start, len) { return str.substr(start, len) }
-    : function (str, start, len) {
-        if (start < 0) start = str.length + start;
-        return str.substr(start, len);
-    };
+posix.format = function(pathObject) {
+  if (!util.isObject(pathObject)) {
+    throw new TypeError(
+        "Parameter 'pathObject' must be an object, not " + typeof pathObject
+    );
+  }
+
+  var root = pathObject.root || '';
+
+  if (!util.isString(root)) {
+    throw new TypeError(
+        "'pathObject.root' must be a string or undefined, not " +
+        typeof pathObject.root
+    );
+  }
+
+  var dir = pathObject.dir ? pathObject.dir + posix.sep : '';
+  var base = pathObject.base || '';
+  return dir + base;
+};
+
+
+posix.parse = function(pathString) {
+  if (!util.isString(pathString)) {
+    throw new TypeError(
+        "Parameter 'pathString' must be a string, not " + typeof pathString
+    );
+  }
+  var allParts = posixSplitPath(pathString);
+  if (!allParts || allParts.length !== 4) {
+    throw new TypeError("Invalid path '" + pathString + "'");
+  }
+  allParts[1] = allParts[1] || '';
+  allParts[2] = allParts[2] || '';
+  allParts[3] = allParts[3] || '';
+
+  return {
+    root: allParts[0],
+    dir: allParts[0] + allParts[1].slice(0, -1),
+    base: allParts[2],
+    ext: allParts[3],
+    name: allParts[2].slice(0, allParts[2].length - allParts[3].length)
+  };
+};
+
+
+posix.sep = '/';
+posix.delimiter = ':';
+
+
+if (isWindows)
+  module.exports = win32;
+else /* posix */
+  module.exports = posix;
+
+module.exports.posix = posix;
+module.exports.win32 = win32;
 });
 
-var pathBrowserify_1 = pathBrowserify.resolve;
-var pathBrowserify_2 = pathBrowserify.normalize;
-var pathBrowserify_3 = pathBrowserify.isAbsolute;
-var pathBrowserify_4 = pathBrowserify.join;
-var pathBrowserify_5 = pathBrowserify.relative;
-var pathBrowserify_6 = pathBrowserify.sep;
-var pathBrowserify_7 = pathBrowserify.delimiter;
-var pathBrowserify_8 = pathBrowserify.dirname;
-var pathBrowserify_9 = pathBrowserify.basename;
-var pathBrowserify_10 = pathBrowserify.extname;
+var path_1 = path.posix;
+var path_2 = path.win32;
 
 var index_browser_umd = createCommonjsModule(function (module, exports) {
 (function (global, factory) {
@@ -8065,7 +9104,7 @@ function objectToString(o) {
   return Object.prototype.toString.call(o);
 }
 
-var util = {
+var util$3 = {
 	isArray: isArray_1,
 	isBoolean: isBoolean_1,
 	isNull: isNull_1,
@@ -8083,7 +9122,7 @@ var util = {
 	isBuffer: isBuffer
 };
 
-var inherits_browser = createCommonjsModule(function (module) {
+var inherits_browser$2 = createCommonjsModule(function (module) {
 if (typeof Object.create === 'function') {
   // implementation from standard node.js 'util' module
   module.exports = function inherits(ctor, superCtor) {
@@ -8359,7 +9398,7 @@ Writable.WritableState = WritableState;
 
 /*<replacement>*/
 
-util.inherits = inherits_browser;
+util$3.inherits = inherits_browser$2;
 /*</replacement>*/
 
 /*<replacement>*/
@@ -8385,7 +9424,7 @@ function _isUint8Array$1(obj) {
 
 
 
-util.inherits(Writable, streamBrowser);
+util$3.inherits(Writable, streamBrowser);
 
 function nop() {}
 
@@ -8975,13 +10014,13 @@ var _stream_duplex = Duplex$1;
 
 /*<replacement>*/
 
-util.inherits = inherits_browser;
+util$3.inherits = inherits_browser$2;
 /*</replacement>*/
 
 
 
 
-util.inherits(Duplex$1, _stream_readable);
+util$3.inherits(Duplex$1, _stream_readable);
 
 var keys = objectKeys(_stream_writable.prototype);
 for (var v = 0; v < keys.length; v++) {
@@ -9366,7 +10405,7 @@ function _isUint8Array(obj) {
 
 /*<replacement>*/
 
-util.inherits = inherits_browser;
+util$3.inherits = inherits_browser$2;
 /*</replacement>*/
 
 /*<replacement>*/
@@ -9383,7 +10422,7 @@ if (nodeCrypto && nodeCrypto.debuglog) {
 
 var StringDecoder;
 
-util.inherits(Readable, streamBrowser);
+util$3.inherits(Readable, streamBrowser);
 
 var kProxyEvents = ['error', 'close', 'destroy', 'pause', 'resume'];
 
@@ -10307,10 +11346,10 @@ var _stream_transform = Transform;
 
 /*<replacement>*/
 
-util.inherits = inherits_browser;
+util$3.inherits = inherits_browser$2;
 /*</replacement>*/
 
-util.inherits(Transform, _stream_duplex);
+util$3.inherits(Transform, _stream_duplex);
 
 function TransformState(stream) {
   this.afterTransform = function (er, data) {
@@ -10457,10 +11496,10 @@ var _stream_passthrough = PassThrough;
 
 /*<replacement>*/
 
-util.inherits = inherits_browser;
+util$3.inherits = inherits_browser$2;
 /*</replacement>*/
 
-util.inherits(PassThrough, _stream_transform);
+util$3.inherits(PassThrough, _stream_transform);
 
 function PassThrough(options) {
   if (!(this instanceof PassThrough)) return new PassThrough(options);
@@ -10926,23 +11965,23 @@ var VirtualFS = function () {
     }
   }, {
     key: 'chdir',
-    value: function chdir(path) {
-      path = this._getPath(path);
-      var navigated = this._navigate(path, true);
+    value: function chdir(path$$1) {
+      path$$1 = this._getPath(path$$1);
+      var navigated = this._navigate(path$$1, true);
       if (!navigated.target) {
-        throw new VirtualFSError(errno_3.ENOENT, path);
+        throw new VirtualFSError(errno_3.ENOENT, path$$1);
       }
       if (!(navigated.target instanceof Directory)) {
-        throw new VirtualFSError(errno_3.ENOTDIR, path);
+        throw new VirtualFSError(errno_3.ENOTDIR, path$$1);
       }
       if (!this._checkPermissions(constants.X_OK, navigated.target.getMetadata())) {
-        throw new VirtualFSError(errno_3.EACCES, path);
+        throw new VirtualFSError(errno_3.EACCES, path$$1);
       }
       this._cwd.changeDir(navigated.target, navigated.pathStack);
     }
   }, {
     key: 'access',
-    value: function access(path) {
+    value: function access(path$$1) {
       for (var _len = arguments.length, args = Array(_len > 1 ? _len - 1 : 0), _key = 1; _key < _len; _key++) {
         args[_key - 1] = arguments[_key];
       }
@@ -10952,24 +11991,24 @@ var VirtualFS = function () {
       });
       var callback = args[cbIndex] || callbackUp;
       cbIndex = cbIndex >= 0 ? cbIndex : args.length;
-      this._callAsync(this.accessSync.bind(this), [path].concat(_toConsumableArray(args.slice(0, cbIndex))), callback, callback);
+      this._callAsync(this.accessSync.bind(this), [path$$1].concat(_toConsumableArray(args.slice(0, cbIndex))), callback, callback);
       return;
     }
   }, {
     key: 'accessSync',
-    value: function accessSync(path) {
+    value: function accessSync(path$$1) {
       var mode = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : constants.F_OK;
 
-      path = this._getPath(path);
-      var target = this._navigate(path, true).target;
+      path$$1 = this._getPath(path$$1);
+      var target = this._navigate(path$$1, true).target;
       if (!target) {
-        throw new VirtualFSError(errno_3.ENOENT, path);
+        throw new VirtualFSError(errno_3.ENOENT, path$$1);
       }
       if (mode === constants.F_OK) {
         return;
       }
       if (!this._checkPermissions(mode, target.getMetadata())) {
-        throw new VirtualFSError(errno_3.EACCES, path);
+        throw new VirtualFSError(errno_3.EACCES, path$$1);
       }
     }
   }, {
@@ -11031,19 +12070,19 @@ var VirtualFS = function () {
     }
   }, {
     key: 'chmod',
-    value: function chmod(path, mode) {
+    value: function chmod(path$$1, mode) {
       var callback = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : callbackUp;
 
-      this._callAsync(this.chmodSync.bind(this), [path, mode], callback, callback);
+      this._callAsync(this.chmodSync.bind(this), [path$$1, mode], callback, callback);
       return;
     }
   }, {
     key: 'chmodSync',
-    value: function chmodSync(path, mode) {
-      path = this._getPath(path);
-      var target = this._navigate(path, true).target;
+    value: function chmodSync(path$$1, mode) {
+      path$$1 = this._getPath(path$$1);
+      var target = this._navigate(path$$1, true).target;
       if (!target) {
-        throw new VirtualFSError(errno_3.ENOENT, path);
+        throw new VirtualFSError(errno_3.ENOENT, path$$1);
       }
       if (typeof mode !== 'number') {
         throw new TypeError('mode must be an integer');
@@ -11057,19 +12096,19 @@ var VirtualFS = function () {
     }
   }, {
     key: 'chown',
-    value: function chown(path, uid, gid) {
+    value: function chown(path$$1, uid, gid) {
       var callback = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : callbackUp;
 
-      this._callAsync(this.chownSync.bind(this), [path, uid, gid], callback, callback);
+      this._callAsync(this.chownSync.bind(this), [path$$1, uid, gid], callback, callback);
       return;
     }
   }, {
     key: 'chownSync',
-    value: function chownSync(path, uid, gid) {
-      path = this._getPath(path);
-      var target = this._navigate(path, true).target;
+    value: function chownSync(path$$1, uid, gid) {
+      path$$1 = this._getPath(path$$1);
+      var target = this._navigate(path$$1, true).target;
       if (!target) {
-        throw new VirtualFSError(errno_3.ENOENT, path);
+        throw new VirtualFSError(errno_3.ENOENT, path$$1);
       }
       var targetMetadata = target.getMetadata();
       if (this._uid !== DEFAULT_ROOT_UID) {
@@ -11174,8 +12213,8 @@ var VirtualFS = function () {
     }
   }, {
     key: 'createReadStream',
-    value: function createReadStream(path, options) {
-      path = this._getPath(path);
+    value: function createReadStream(path$$1, options) {
+      path$$1 = this._getPath(path$$1);
       options = this._getOptions({
         flags: 'r',
         encoding: null,
@@ -11189,12 +12228,12 @@ var VirtualFS = function () {
           throw new RangeError('ERR_VALUE_OUT_OF_RANGE');
         }
       }
-      return new ReadStream(path, options, this);
+      return new ReadStream(path$$1, options, this);
     }
   }, {
     key: 'createWriteStream',
-    value: function createWriteStream(path, options) {
-      path = this._getPath(path);
+    value: function createWriteStream(path$$1, options) {
+      path$$1 = this._getPath(path$$1);
       options = this._getOptions({
         flags: 'w',
         defaultEncoding: 'utf8',
@@ -11207,23 +12246,23 @@ var VirtualFS = function () {
           throw new RangeError('ERR_VALUE_OUT_OF_RANGE');
         }
       }
-      return new WriteStream(path, options, this);
+      return new WriteStream(path$$1, options, this);
     }
   }, {
     key: 'exists',
-    value: function exists(path, callback) {
+    value: function exists(path$$1, callback) {
       if (!callback) {
         callback = function callback() {};
       }
-      this._callAsync(this.existsSync.bind(this), [path], callback, callback);
+      this._callAsync(this.existsSync.bind(this), [path$$1], callback, callback);
       return;
     }
   }, {
     key: 'existsSync',
-    value: function existsSync(path) {
-      path = this._getPath(path);
+    value: function existsSync(path$$1) {
+      path$$1 = this._getPath(path$$1);
       try {
-        return !!this._navigate(path, true).target;
+        return !!this._navigate(path$$1, true).target;
       } catch (e) {
         return false;
       }
@@ -11536,19 +12575,19 @@ var VirtualFS = function () {
     }
   }, {
     key: 'lchmod',
-    value: function lchmod(path, mode) {
+    value: function lchmod(path$$1, mode) {
       var callback = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : callbackUp;
 
-      this._callAsync(this.lchmodSync.bind(this), [path, mode], callback, callback);
+      this._callAsync(this.lchmodSync.bind(this), [path$$1, mode], callback, callback);
       return;
     }
   }, {
     key: 'lchmodSync',
-    value: function lchmodSync(path, mode) {
-      path = this._getPath(path);
-      var target = this._navigate(path, false).target;
+    value: function lchmodSync(path$$1, mode) {
+      path$$1 = this._getPath(path$$1);
+      var target = this._navigate(path$$1, false).target;
       if (!target) {
-        throw new VirtualFSError(errno_3.ENOENT, path);
+        throw new VirtualFSError(errno_3.ENOENT, path$$1);
       }
       if (typeof mode !== 'number') {
         throw new TypeError('mode must be an integer');
@@ -11562,19 +12601,19 @@ var VirtualFS = function () {
     }
   }, {
     key: 'lchown',
-    value: function lchown(path, uid, gid) {
+    value: function lchown(path$$1, uid, gid) {
       var callback = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : callbackUp;
 
-      this._callAsync(this.lchownSync.bind(this), [path, uid, gid], callback, callback);
+      this._callAsync(this.lchownSync.bind(this), [path$$1, uid, gid], callback, callback);
       return;
     }
   }, {
     key: 'lchownSync',
-    value: function lchownSync(path, uid, gid) {
-      path = this._getPath(path);
-      var target = this._navigate(path, false).target;
+    value: function lchownSync(path$$1, uid, gid) {
+      path$$1 = this._getPath(path$$1);
+      var target = this._navigate(path$$1, false).target;
       if (!target) {
-        throw new VirtualFSError(errno_3.ENOENT, path);
+        throw new VirtualFSError(errno_3.ENOENT, path$$1);
       }
       var targetMetadata = target.getMetadata();
       if (this._uid !== DEFAULT_ROOT_UID) {
@@ -11673,28 +12712,28 @@ var VirtualFS = function () {
     }
   }, {
     key: 'lstat',
-    value: function lstat(path) {
+    value: function lstat(path$$1) {
       var callback = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : callbackUp;
 
-      this._callAsync(this.lstatSync.bind(this), [path], function (stat) {
+      this._callAsync(this.lstatSync.bind(this), [path$$1], function (stat) {
         return callback(null, stat);
       }, callback);
       return;
     }
   }, {
     key: 'lstatSync',
-    value: function lstatSync(path) {
-      path = this._getPath(path);
-      var target = this._navigate(path, false).target;
+    value: function lstatSync(path$$1) {
+      path$$1 = this._getPath(path$$1);
+      var target = this._navigate(path$$1, false).target;
       if (target) {
         return new Stat(_extends$1({}, target.getMetadata()));
       } else {
-        throw new VirtualFSError(errno_3.ENOENT, path);
+        throw new VirtualFSError(errno_3.ENOENT, path$$1);
       }
     }
   }, {
     key: 'mkdir',
-    value: function mkdir(path) {
+    value: function mkdir(path$$1) {
       for (var _len7 = arguments.length, args = Array(_len7 > 1 ? _len7 - 1 : 0), _key7 = 1; _key7 < _len7; _key7++) {
         args[_key7 - 1] = arguments[_key7];
       }
@@ -11704,28 +12743,28 @@ var VirtualFS = function () {
       });
       var callback = args[cbIndex] || callbackUp;
       cbIndex = cbIndex >= 0 ? cbIndex : args.length;
-      this._callAsync(this.mkdirSync.bind(this), [path].concat(_toConsumableArray(args.slice(0, cbIndex))), callback, callback);
+      this._callAsync(this.mkdirSync.bind(this), [path$$1].concat(_toConsumableArray(args.slice(0, cbIndex))), callback, callback);
       return;
     }
   }, {
     key: 'mkdirSync',
-    value: function mkdirSync(path) {
+    value: function mkdirSync(path$$1) {
       var mode = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : DEFAULT_DIRECTORY_PERM;
 
-      path = this._getPath(path);
+      path$$1 = this._getPath(path$$1);
       // we expect a non-existent directory
-      path = path.replace(/(.+?)\/+$/, '$1');
-      var navigated = this._navigate(path, true);
+      path$$1 = path$$1.replace(/(.+?)\/+$/, '$1');
+      var navigated = this._navigate(path$$1, true);
       if (navigated.target) {
-        throw new VirtualFSError(errno_3.EEXIST, path, null, 'mkdir');
+        throw new VirtualFSError(errno_3.EEXIST, path$$1, null, 'mkdir');
       } else if (!navigated.target && navigated.remaining) {
-        throw new VirtualFSError(errno_3.ENOENT, path, null, 'mkdir');
+        throw new VirtualFSError(errno_3.ENOENT, path$$1, null, 'mkdir');
       } else if (!navigated.target) {
         if (navigated.dir.getMetadata().nlink < 2) {
-          throw new VirtualFSError(errno_3.ENOENT, path, null, 'mkdir');
+          throw new VirtualFSError(errno_3.ENOENT, path$$1, null, 'mkdir');
         }
         if (!this._checkPermissions(constants.W_OK, navigated.dir.getMetadata())) {
-          throw new VirtualFSError(errno_3.EACCES, path, null, 'mkdir');
+          throw new VirtualFSError(errno_3.EACCES, path$$1, null, 'mkdir');
         }
 
         var _iNodeMgr$createINode3 = this._iNodeMgr.createINode(Directory, {
@@ -11743,7 +12782,7 @@ var VirtualFS = function () {
     }
   }, {
     key: 'mkdirp',
-    value: function mkdirp(path) {
+    value: function mkdirp(path$$1) {
       for (var _len8 = arguments.length, args = Array(_len8 > 1 ? _len8 - 1 : 0), _key8 = 1; _key8 < _len8; _key8++) {
         args[_key8 - 1] = arguments[_key8];
       }
@@ -11753,28 +12792,28 @@ var VirtualFS = function () {
       });
       var callback = args[cbIndex] || callbackUp;
       cbIndex = cbIndex >= 0 ? cbIndex : args.length;
-      this._callAsync(this.mkdirpSync.bind(this), [path].concat(_toConsumableArray(args.slice(0, cbIndex))), callback, callback);
+      this._callAsync(this.mkdirpSync.bind(this), [path$$1].concat(_toConsumableArray(args.slice(0, cbIndex))), callback, callback);
       return;
     }
   }, {
     key: 'mkdirpSync',
-    value: function mkdirpSync(path) {
+    value: function mkdirpSync(path$$1) {
       var mode = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : DEFAULT_DIRECTORY_PERM;
 
-      path = this._getPath(path);
+      path$$1 = this._getPath(path$$1);
       // we expect a directory
-      path = path.replace(/(.+?)\/+$/, '$1');
+      path$$1 = path$$1.replace(/(.+?)\/+$/, '$1');
       var iNode = void 0;
       var index = void 0;
       var currentDir = void 0;
-      var navigated = this._navigate(path, true);
+      var navigated = this._navigate(path$$1, true);
       while (true) {
         if (!navigated.target) {
           if (navigated.dir.getMetadata().nlink < 2) {
-            throw new VirtualFSError(errno_3.ENOENT, path);
+            throw new VirtualFSError(errno_3.ENOENT, path$$1);
           }
           if (!this._checkPermissions(constants.W_OK, navigated.dir.getMetadata())) {
-            throw new VirtualFSError(errno_3.EACCES, path);
+            throw new VirtualFSError(errno_3.EACCES, path$$1);
           }
 
           var _iNodeMgr$createINode5 = this._iNodeMgr.createINode(Directory, {
@@ -11797,7 +12836,7 @@ var VirtualFS = function () {
             break;
           }
         } else if (!(navigated.target instanceof Directory)) {
-          throw new VirtualFSError(errno_3.ENOTDIR, path);
+          throw new VirtualFSError(errno_3.ENOTDIR, path$$1);
         } else {
           break;
         }
@@ -11855,7 +12894,7 @@ var VirtualFS = function () {
     }
   }, {
     key: 'mknod',
-    value: function mknod(path, type, major, minor) {
+    value: function mknod(path$$1, type, major, minor) {
       for (var _len10 = arguments.length, args = Array(_len10 > 4 ? _len10 - 4 : 0), _key10 = 4; _key10 < _len10; _key10++) {
         args[_key10 - 4] = arguments[_key10];
       }
@@ -11865,24 +12904,24 @@ var VirtualFS = function () {
       });
       var callback = args[cbIndex] || callbackUp;
       cbIndex = cbIndex >= 0 ? cbIndex : args.length;
-      this._callAsync(this.mknodSync.bind(this), [path, type, major, minor].concat(_toConsumableArray(args.slice(0, cbIndex))), callback, callback);
+      this._callAsync(this.mknodSync.bind(this), [path$$1, type, major, minor].concat(_toConsumableArray(args.slice(0, cbIndex))), callback, callback);
       return;
     }
   }, {
     key: 'mknodSync',
-    value: function mknodSync(path, type, major, minor) {
+    value: function mknodSync(path$$1, type, major, minor) {
       var mode = arguments.length > 4 && arguments[4] !== undefined ? arguments[4] : DEFAULT_FILE_PERM;
 
-      path = this._getPath(path);
-      var navigated = this._navigate(path, false);
+      path$$1 = this._getPath(path$$1);
+      var navigated = this._navigate(path$$1, false);
       if (navigated.target) {
-        throw new VirtualFSError(errno_3.EEXIST, path, null, 'mknod');
+        throw new VirtualFSError(errno_3.EEXIST, path$$1, null, 'mknod');
       }
       if (navigated.dir.getMetadata().nlink < 2) {
-        throw new VirtualFSError(errno_3.ENOENT, path, null, 'mknod');
+        throw new VirtualFSError(errno_3.ENOENT, path$$1, null, 'mknod');
       }
       if (!this._checkPermissions(constants.W_OK, navigated.dir.getMetadata())) {
-        throw new VirtualFSError(errno_3.EACCES, path, null, 'mknod');
+        throw new VirtualFSError(errno_3.EACCES, path$$1, null, 'mknod');
       }
       var index = void 0;
       switch (type) {
@@ -11903,7 +12942,7 @@ var VirtualFS = function () {
             throw TypeError('major and minor must set as numbers when creating device nodes');
           }
           if (major > MAJOR_MAX || minor > MINOR_MAX || minor < MAJOR_MIN || minor < MINOR_MIN) {
-            throw new VirtualFSError(errno_3.EINVAL, path, null, 'mknod');
+            throw new VirtualFSError(errno_3.EINVAL, path$$1, null, 'mknod');
           }
 
           var _iNodeMgr$createINode9 = this._iNodeMgr.createINode(CharacterDev, {
@@ -11919,14 +12958,14 @@ var VirtualFS = function () {
 
           break;
         default:
-          throw new VirtualFSError(errno_3.EPERM, path, null, 'mknod');
+          throw new VirtualFSError(errno_3.EPERM, path$$1, null, 'mknod');
       }
       navigated.dir.addEntry(navigated.name, index);
       return;
     }
   }, {
     key: 'open',
-    value: function open(path, flags) {
+    value: function open(path$$1, flags) {
       for (var _len11 = arguments.length, args = Array(_len11 > 2 ? _len11 - 2 : 0), _key11 = 2; _key11 < _len11; _key11++) {
         args[_key11 - 2] = arguments[_key11];
       }
@@ -11936,24 +12975,24 @@ var VirtualFS = function () {
       });
       var callback = args[cbIndex] || callbackUp;
       cbIndex = cbIndex >= 0 ? cbIndex : args.length;
-      this._callAsync(this.openSync.bind(this), [path, flags].concat(_toConsumableArray(args.slice(0, cbIndex))), function (fdIndex) {
+      this._callAsync(this.openSync.bind(this), [path$$1, flags].concat(_toConsumableArray(args.slice(0, cbIndex))), function (fdIndex) {
         return callback(null, fdIndex);
       }, callback);
       return;
     }
   }, {
     key: 'openSync',
-    value: function openSync(path, flags) {
+    value: function openSync(path$$1, flags) {
       var mode = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : DEFAULT_FILE_PERM;
 
-      return this._openSync(path, flags, mode)[1];
+      return this._openSync(path$$1, flags, mode)[1];
     }
   }, {
     key: '_openSync',
-    value: function _openSync(path, flags) {
+    value: function _openSync(path$$1, flags) {
       var mode = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : DEFAULT_FILE_PERM;
 
-      path = this._getPath(path);
+      path$$1 = this._getPath(path$$1);
       if (typeof flags === 'string') {
         switch (flags) {
           case 'r':
@@ -11995,13 +13034,13 @@ var VirtualFS = function () {
       if (typeof flags !== 'number') {
         throw new TypeError('Unknown file open flag: ' + flags);
       }
-      var navigated = this._navigate(path, false);
+      var navigated = this._navigate(path$$1, false);
       if (navigated.target instanceof Symlink) {
         // cannot be symlink if O_NOFOLLOW
         if (flags & constants.O_NOFOLLOW) {
-          throw new VirtualFSError(errno_3.ELOOP, path, null, 'open');
+          throw new VirtualFSError(errno_3.ELOOP, path$$1, null, 'open');
         }
-        navigated = this._navigateFrom(navigated.dir, navigated.name + navigated.remaining, true, undefined, undefined, path);
+        navigated = this._navigateFrom(navigated.dir, navigated.name + navigated.remaining, true, undefined, undefined, path$$1);
       }
       var target = navigated.target;
       // cannot be missing unless O_CREAT
@@ -12010,10 +13049,10 @@ var VirtualFS = function () {
         if (!navigated.remaining && flags & constants.O_CREAT) {
           // cannot create if the current directory has been unlinked from its parent directory
           if (navigated.dir.getMetadata().nlink < 2) {
-            throw new VirtualFSError(errno_3.ENOENT, path, null, 'open');
+            throw new VirtualFSError(errno_3.ENOENT, path$$1, null, 'open');
           }
           if (!this._checkPermissions(constants.W_OK, navigated.dir.getMetadata())) {
-            throw new VirtualFSError(errno_3.EACCES, path, null, 'open');
+            throw new VirtualFSError(errno_3.EACCES, path$$1, null, 'open');
           }
           var index = void 0;
 
@@ -12030,20 +13069,20 @@ var VirtualFS = function () {
 
           navigated.dir.addEntry(navigated.name, index);
         } else {
-          throw new VirtualFSError(errno_3.ENOENT, path, null, 'open');
+          throw new VirtualFSError(errno_3.ENOENT, path$$1, null, 'open');
         }
       } else {
         // target already exists cannot be created exclusively
         if (flags & constants.O_CREAT && flags & constants.O_EXCL) {
-          throw new VirtualFSError(errno_3.EEXIST, path, null, 'open');
+          throw new VirtualFSError(errno_3.EEXIST, path$$1, null, 'open');
         }
         // cannot be directory if write capabilities are requested
         if (target instanceof Directory && flags & (constants.O_WRONLY | flags & constants.O_RDWR)) {
-          throw new VirtualFSError(errno_3.EISDIR, path, null, 'open');
+          throw new VirtualFSError(errno_3.EISDIR, path$$1, null, 'open');
         }
         // must be directory if O_DIRECTORY
         if (flags & constants.O_DIRECTORY && !(target instanceof Directory)) {
-          throw new VirtualFSError(errno_3.ENOTDIR, path, null, 'open');
+          throw new VirtualFSError(errno_3.ENOTDIR, path$$1, null, 'open');
         }
         // must truncate a file if O_TRUNC
         if (flags & constants.O_TRUNC && target instanceof File && flags & (constants.O_WRONLY | constants.O_RDWR)) {
@@ -12059,7 +13098,7 @@ var VirtualFS = function () {
           access = constants.R_OK;
         }
         if (!this._checkPermissions(access, target.getMetadata())) {
-          throw new VirtualFSError(errno_3.EACCES, path, null, 'open');
+          throw new VirtualFSError(errno_3.EACCES, path$$1, null, 'open');
         }
       }
       try {
@@ -12067,7 +13106,7 @@ var VirtualFS = function () {
         return fd;
       } catch (e) {
         if (e instanceof VirtualFSError) {
-          e.setPaths(path);
+          e.setPaths(path$$1);
           e.setSyscall('open');
         }
         throw e;
@@ -12131,7 +13170,7 @@ var VirtualFS = function () {
     }
   }, {
     key: 'readdir',
-    value: function readdir(path) {
+    value: function readdir(path$$1) {
       for (var _len13 = arguments.length, args = Array(_len13 > 1 ? _len13 - 1 : 0), _key13 = 1; _key13 < _len13; _key13++) {
         args[_key13 - 1] = arguments[_key13];
       }
@@ -12141,25 +13180,25 @@ var VirtualFS = function () {
       });
       var callback = args[cbIndex] || callbackUp;
       cbIndex = cbIndex >= 0 ? cbIndex : args.length;
-      this._callAsync(this.readdirSync.bind(this), [path].concat(_toConsumableArray(args.slice(0, cbIndex))), function (files) {
+      this._callAsync(this.readdirSync.bind(this), [path$$1].concat(_toConsumableArray(args.slice(0, cbIndex))), function (files) {
         return callback(null, files);
       }, callback);
       return;
     }
   }, {
     key: 'readdirSync',
-    value: function readdirSync(path, options) {
-      path = this._getPath(path);
+    value: function readdirSync(path$$1, options) {
+      path$$1 = this._getPath(path$$1);
       options = this._getOptions({ encoding: 'utf8' }, options);
-      var navigated = this._navigate(path, true);
+      var navigated = this._navigate(path$$1, true);
       if (!navigated.target) {
-        throw new VirtualFSError(errno_3.ENOENT, path, null, 'readdir');
+        throw new VirtualFSError(errno_3.ENOENT, path$$1, null, 'readdir');
       }
       if (!(navigated.target instanceof Directory)) {
-        throw new VirtualFSError(errno_3.ENOTDIR, path, null, 'readdir');
+        throw new VirtualFSError(errno_3.ENOTDIR, path$$1, null, 'readdir');
       }
       if (!this._checkPermissions(constants.R_OK, navigated.target.getMetadata())) {
-        throw new VirtualFSError(errno_3.EACCES, path, null, 'readdir');
+        throw new VirtualFSError(errno_3.EACCES, path$$1, null, 'readdir');
       }
       return [].concat(_toConsumableArray(navigated.target.getEntries())).filter(function (_ref) {
         var _ref2 = _slicedToArray(_ref, 2),
@@ -12226,7 +13265,7 @@ var VirtualFS = function () {
     }
   }, {
     key: 'readlink',
-    value: function readlink(path) {
+    value: function readlink(path$$1) {
       for (var _len15 = arguments.length, args = Array(_len15 > 1 ? _len15 - 1 : 0), _key15 = 1; _key15 < _len15; _key15++) {
         args[_key15 - 1] = arguments[_key15];
       }
@@ -12236,22 +13275,22 @@ var VirtualFS = function () {
       });
       var callback = args[cbIndex] || callbackUp;
       cbIndex = cbIndex >= 0 ? cbIndex : args.length;
-      this._callAsync(this.readlinkSync.bind(this), [path].concat(_toConsumableArray(args.slice(0, cbIndex))), function (linkString) {
+      this._callAsync(this.readlinkSync.bind(this), [path$$1].concat(_toConsumableArray(args.slice(0, cbIndex))), function (linkString) {
         return callback(null, linkString);
       }, callback);
       return;
     }
   }, {
     key: 'readlinkSync',
-    value: function readlinkSync(path, options) {
-      path = this._getPath(path);
+    value: function readlinkSync(path$$1, options) {
+      path$$1 = this._getPath(path$$1);
       options = this._getOptions({ encoding: 'utf8' }, options);
-      var target = this._navigate(path, false).target;
+      var target = this._navigate(path$$1, false).target;
       if (!target) {
-        throw new VirtualFSError(errno_3.ENOENT, path);
+        throw new VirtualFSError(errno_3.ENOENT, path$$1);
       }
       if (!(target instanceof Symlink)) {
-        throw new VirtualFSError(errno_3.EINVAL, path);
+        throw new VirtualFSError(errno_3.EINVAL, path$$1);
       }
       var link = target.getLink();
       if (options.encoding === 'buffer') {
@@ -12262,7 +13301,7 @@ var VirtualFS = function () {
     }
   }, {
     key: 'realpath',
-    value: function realpath(path) {
+    value: function realpath(path$$1) {
       for (var _len16 = arguments.length, args = Array(_len16 > 1 ? _len16 - 1 : 0), _key16 = 1; _key16 < _len16; _key16++) {
         args[_key16 - 1] = arguments[_key16];
       }
@@ -12272,19 +13311,19 @@ var VirtualFS = function () {
       });
       var callback = args[cbIndex] || callbackUp;
       cbIndex = cbIndex >= 0 ? cbIndex : args.length;
-      this._callAsync(this.realpathSync.bind(this), [path].concat(_toConsumableArray(args.slice(0, cbIndex))), function (path) {
-        return callback(null, path);
+      this._callAsync(this.realpathSync.bind(this), [path$$1].concat(_toConsumableArray(args.slice(0, cbIndex))), function (path$$1) {
+        return callback(null, path$$1);
       }, callback);
       return;
     }
   }, {
     key: 'realpathSync',
-    value: function realpathSync(path, options) {
-      path = this._getPath(path);
+    value: function realpathSync(path$$1, options) {
+      path$$1 = this._getPath(path$$1);
       options = this._getOptions({ encoding: 'utf8' }, options);
-      var navigated = this._navigate(path, true);
+      var navigated = this._navigate(path$$1, true);
       if (!navigated.target) {
-        throw new VirtualFSError(errno_3.ENOENT, path);
+        throw new VirtualFSError(errno_3.ENOENT, path$$1);
       }
       if (options.encoding === 'buffer') {
         return buffer_1.from('/' + navigated.pathStack.join('/'));
@@ -12373,65 +13412,65 @@ var VirtualFS = function () {
     }
   }, {
     key: 'rmdir',
-    value: function rmdir(path) {
+    value: function rmdir(path$$1) {
       var callback = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : callbackUp;
 
-      this._callAsync(this.rmdirSync.bind(this), [path], callback, callback);
+      this._callAsync(this.rmdirSync.bind(this), [path$$1], callback, callback);
       return;
     }
   }, {
     key: 'rmdirSync',
-    value: function rmdirSync(path) {
-      path = this._getPath(path);
+    value: function rmdirSync(path$$1) {
+      path$$1 = this._getPath(path$$1);
       // if the path has trailing slashes, navigation would traverse into it
       // we must trim off these trailing slashes to allow these directories to be removed
-      path = path.replace(/(.+?)\/+$/, '$1');
-      var navigated = this._navigate(path, false);
+      path$$1 = path$$1.replace(/(.+?)\/+$/, '$1');
+      var navigated = this._navigate(path$$1, false);
       // this is for if the path resolved to root
       if (!navigated.name) {
-        throw new VirtualFSError(errno_3.EBUSY, path, null, 'rmdir');
+        throw new VirtualFSError(errno_3.EBUSY, path$$1, null, 'rmdir');
       }
       // on linux, when .. is used, the parent directory becomes unknown
       // in that case, they return with ENOTEMPTY
       // but the directory may in fact be empty
       // for this edge case, we instead use EINVAL
       if (navigated.name === '.' || navigated.name === '..') {
-        throw new VirtualFSError(errno_3.EINVAL, path, null, 'rmdir');
+        throw new VirtualFSError(errno_3.EINVAL, path$$1, null, 'rmdir');
       }
       if (!navigated.target) {
-        throw new VirtualFSError(errno_3.ENOENT, path, null, 'rmdir');
+        throw new VirtualFSError(errno_3.ENOENT, path$$1, null, 'rmdir');
       }
       if (!(navigated.target instanceof Directory)) {
-        throw new VirtualFSError(errno_3.ENOTDIR, path, null, 'rmdir');
+        throw new VirtualFSError(errno_3.ENOTDIR, path$$1, null, 'rmdir');
       }
       if ([].concat(_toConsumableArray(navigated.target.getEntries())).length - 2) {
-        throw new VirtualFSError(errno_3.ENOTEMPTY, path, null, 'rmdir');
+        throw new VirtualFSError(errno_3.ENOTEMPTY, path$$1, null, 'rmdir');
       }
       if (!this._checkPermissions(constants.W_OK, navigated.dir.getMetadata())) {
-        throw new VirtualFSError(errno_3.EACCES, path, null, 'rmdir');
+        throw new VirtualFSError(errno_3.EACCES, path$$1, null, 'rmdir');
       }
       navigated.dir.deleteEntry(navigated.name);
       return;
     }
   }, {
     key: 'stat',
-    value: function stat(path) {
+    value: function stat(path$$1) {
       var callback = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : callbackUp;
 
-      this._callAsync(this.statSync.bind(this), [path], function (stat) {
+      this._callAsync(this.statSync.bind(this), [path$$1], function (stat) {
         return callback(null, stat);
       }, callback);
       return;
     }
   }, {
     key: 'statSync',
-    value: function statSync(path) {
-      path = this._getPath(path);
-      var target = this._navigate(path, true).target;
+    value: function statSync(path$$1) {
+      path$$1 = this._getPath(path$$1);
+      var target = this._navigate(path$$1, true).target;
       if (target) {
         return new Stat(_extends$1({}, target.getMetadata()));
       } else {
-        throw new VirtualFSError(errno_3.ENOENT, path);
+        throw new VirtualFSError(errno_3.ENOENT, path$$1);
       }
     }
   }, {
@@ -12520,25 +13559,25 @@ var VirtualFS = function () {
     }
   }, {
     key: 'unlink',
-    value: function unlink(path) {
+    value: function unlink(path$$1) {
       var callback = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : callbackUp;
 
-      this._callAsync(this.unlinkSync.bind(this), [path], callback, callback);
+      this._callAsync(this.unlinkSync.bind(this), [path$$1], callback, callback);
       return;
     }
   }, {
     key: 'unlinkSync',
-    value: function unlinkSync(path) {
-      path = this._getPath(path);
-      var navigated = this._navigate(path, false);
+    value: function unlinkSync(path$$1) {
+      path$$1 = this._getPath(path$$1);
+      var navigated = this._navigate(path$$1, false);
       if (!navigated.target) {
-        throw new VirtualFSError(errno_3.ENOENT, path);
+        throw new VirtualFSError(errno_3.ENOENT, path$$1);
       }
       if (!this._checkPermissions(constants.W_OK, navigated.dir.getMetadata())) {
-        throw new VirtualFSError(errno_3.EACCES, path);
+        throw new VirtualFSError(errno_3.EACCES, path$$1);
       }
       if (navigated.target instanceof Directory) {
-        throw new VirtualFSError(errno_3.EISDIR, path);
+        throw new VirtualFSError(errno_3.EISDIR, path$$1);
       }
       navigated.target.getMetadata().ctime = new Date();
       navigated.dir.deleteEntry(navigated.name);
@@ -12546,19 +13585,19 @@ var VirtualFS = function () {
     }
   }, {
     key: 'utimes',
-    value: function utimes(path, atime, mtime) {
+    value: function utimes(path$$1, atime, mtime) {
       var callback = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : callbackUp;
 
-      this._callAsync(this.utimesSync.bind(this), [path, atime, mtime], callback, callback);
+      this._callAsync(this.utimesSync.bind(this), [path$$1, atime, mtime], callback, callback);
       return;
     }
   }, {
     key: 'utimesSync',
-    value: function utimesSync(path, atime, mtime) {
-      path = this._getPath(path);
-      var target = this._navigate(path, true).target;
+    value: function utimesSync(path$$1, atime, mtime) {
+      path$$1 = this._getPath(path$$1);
+      var target = this._navigate(path$$1, true).target;
       if (!target) {
-        throw new VirtualFSError(errno_3.ENOENT, path, null, 'utimes');
+        throw new VirtualFSError(errno_3.ENOENT, path$$1, null, 'utimes');
       }
       var metadata = target.getMetadata();
       var newAtime = void 0;
@@ -12716,15 +13755,15 @@ var VirtualFS = function () {
 
   }, {
     key: '_getPath',
-    value: function _getPath(path) {
-      if (typeof path === 'string') {
-        return path;
+    value: function _getPath(path$$1) {
+      if (typeof path$$1 === 'string') {
+        return path$$1;
       }
-      if (path instanceof buffer_1) {
-        return path.toString();
+      if (path$$1 instanceof buffer_1) {
+        return path$$1.toString();
       }
-      if ((typeof path === 'undefined' ? 'undefined' : _typeof(path)) === 'object' && typeof path.pathname === 'string') {
-        return this._getPathFromURL(path);
+      if ((typeof path$$1 === 'undefined' ? 'undefined' : _typeof(path$$1)) === 'object' && typeof path$$1.pathname === 'string') {
+        return this._getPathFromURL(path$$1);
       }
       throw new TypeError('path must be a string or Buffer or URL');
     }
@@ -12943,7 +13982,7 @@ var VirtualFS = function () {
           activeSymlinks.add(target);
         }
         // although symlinks should not have an empty links, it's still handled correctly here
-        nextPath = pathBrowserify_4(target.getLink(), parse.rest);
+        nextPath = path_1.join(target.getLink(), parse.rest);
         if (nextPath[0] === '/') {
           return this._navigate(nextPath, resolveLastLink, activeSymlinks, origPathS);
         } else {
