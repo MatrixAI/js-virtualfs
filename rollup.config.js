@@ -95,7 +95,11 @@ export default [
         preferBuiltins: false,
         browser: true
       }),
-      commonjs()
+      commonjs({
+        namedExports: {
+          'node_modules/process/browser.js': ['nextTick']
+        }
+      })
     ]
   }
 ];
