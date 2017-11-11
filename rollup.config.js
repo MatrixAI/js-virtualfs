@@ -30,7 +30,7 @@ export default [
           ['env', {
             modules: false,
             targets: {
-              node: '6.0.0'
+              node: '6.4.0'
             }
           }]
         ]
@@ -61,7 +61,7 @@ export default [
           ['env', {
             modules: false,
             targets: {
-              node: '6.0.0'
+              node: '6.4.0'
             }
           }]
         ]
