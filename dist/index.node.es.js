@@ -1,18 +1,24 @@
-import _Array$from from 'babel-runtime/core-js/array/from';
 import _Set from 'babel-runtime/core-js/set';
+import _Array$from from 'babel-runtime/core-js/array/from';
 import _extends from 'babel-runtime/helpers/extends';
-import _setImmediate from 'babel-runtime/core-js/set-immediate';
-import { Buffer } from 'buffer';
+import _slicedToArray from 'babel-runtime/helpers/slicedToArray';
+import { Buffer as Buffer$1 } from 'buffer';
+import process, { nextTick } from 'process';
 import { join } from 'path-browserify';
-import errno from 'errno';
+import permaProxy from 'permaproxy';
+import _Object$freeze from 'babel-runtime/core-js/object/freeze';
 import _Map from 'babel-runtime/core-js/map';
 import Counter from 'resource-counter';
+import _WeakMap from 'babel-runtime/core-js/weak-map';
+import { code } from 'errno';
 import { Readable, Writable } from 'readable-stream';
+import randomBytes from 'secure-random-bytes';
 
-var constants = {
+var constants = _Object$freeze({
   O_RDONLY: 0,
   O_WRONLY: 1,
   O_RDWR: 2,
+  O_ACCMODE: 3,
   S_IFMT: 61440,
   S_IFREG: 32768,
   S_IFDIR: 16384,
@@ -47,8 +53,14 @@ var constants = {
   F_OK: 0,
   R_OK: 4,
   W_OK: 2,
-  X_OK: 1
-};
+  X_OK: 1,
+  COPYFILE_EXCL: 1,
+  SEEK_SET: 0,
+  SEEK_CUR: 1,
+  SEEK_END: 2,
+  MAP_SHARED: 1,
+  MAP_PRIVATE: 2
+});
 
 /** @module Stat */
 
@@ -65,8 +77,8 @@ class Stat {
     this.ino = props.ino;
     this.mode = props.mode;
     this.nlink = props.nlink;
-    this.uid = props.uid || 0; // in-memory usage is always root
-    this.gid = props.gid || 0; // in-memory usage is always root
+    this.uid = props.uid;
+    this.gid = props.gid;
     this.rdev = props.rdev || 0; // is 0 for regular files and directories
     this.size = props.size;
     this.blksize = undefined; // in-memory doesn't have blocks
@@ -95,14 +107,14 @@ class Stat {
    * Checks if block device.
    */
   isBlockDevice() {
-    return false;
+    return !!(this.mode & constants.S_IFBLK);
   }
 
   /**
    * Checks if character device.
    */
   isCharacterDevice() {
-    return false;
+    return !!(this.mode & constants.S_IFCHR);
   }
 
   /**
@@ -116,18 +128,239 @@ class Stat {
    * Checks if FIFO.
    */
   isFIFO() {
-    return false;
+    return !!(this.mode & constants.S_IFIFO);
   }
 
   /**
    * Checks if socket.
    */
   isSocket() {
-    return false;
+    return !!(this.mode & constants.S_IFSOCK);
   }
 
 }
 
+class CurrentDirectory {
+
+  constructor(iNodeMgr, iNode, curPath = []) {
+    this._iNodeMgr = iNodeMgr;
+    this._iNode = iNode;
+    this._curPath = curPath;
+    iNodeMgr.refINode(iNode);
+  }
+
+  changeDir(iNode, curPath) {
+    this._iNodeMgr.refINode(iNode);
+    this._iNodeMgr.unrefINode(this._iNode);
+    this._iNode = iNode;
+    this._curPath = curPath;
+    return;
+  }
+
+  getINode() {
+    return this._iNode;
+  }
+
+  getPathStack() {
+    return [...this._curPath];
+  }
+
+  getPath() {
+    return '/' + this._curPath.join('/');
+  }
+
+}
+
+/**
+ * Default root uid.
+ */
+
+/** @module Permissions */
+
+const DEFAULT_ROOT_UID = 0;
+
+/**
+ * Default root gid.
+ */
+const DEFAULT_ROOT_GID = 0;
+
+/**
+ * Default root directory permissions of `rwxr-xr-x`.
+ */
+const DEFAULT_ROOT_PERM = constants.S_IRWXU | constants.S_IRGRP | constants.S_IXGRP | constants.S_IROTH | constants.S_IXOTH;
+
+/**
+ * Default file permissions of `rw-rw-rw-`.
+ */
+const DEFAULT_FILE_PERM = constants.S_IRUSR | constants.S_IWUSR | constants.S_IRGRP | constants.S_IWGRP | constants.S_IROTH | constants.S_IWOTH;
+
+/**
+ * Default directory permissions of `rwxrwxrwx`.
+ */
+const DEFAULT_DIRECTORY_PERM = constants.S_IRWXU | constants.S_IRWXG | constants.S_IRWXO;
+
+/**
+ * Default symlink permissions of `rwxrwxrwx`.
+ */
+const DEFAULT_SYMLINK_PERM = constants.S_IRWXU | constants.S_IRWXG | constants.S_IRWXO;
+
+/**
+ * Applies umask to default set of permissions.
+ */
+function applyUmask(perms, umask) {
+  return perms & ~umask;
+}
+
+/**
+ * Permission checking relies on ownership details of the iNode.
+ * If the accessing user is the same as the iNode user, then only user permissions are used.
+ * If the accessing group is the same as the iNode group, then only the group permissions are used.
+ * Otherwise the other permissions are used.
+ */
+function resolveOwnership(uid, gid, stat) {
+  if (uid === stat.uid) {
+    return (stat.mode & constants.S_IRWXU) >> 6;
+  } else if (gid === stat.gid) {
+    return (stat.mode & constants.S_IRWXG) >> 3;
+  } else {
+    return stat.mode & constants.S_IRWXO;
+  }
+}
+
+/**
+ * Checks the desired permissions with user id and group id against the metadata of an iNode.
+ * The desired permissions can be bitwise combinations of constants.R_OK, constants.W_OK and constants.X_OK.
+ */
+function checkPermissions(access, uid, gid, stat) {
+  return (access & resolveOwnership(uid, gid, stat)) === access;
+}
+
+/** @module Devices */
+
+const MAJOR_BITSIZE = 12;
+const MINOR_BITSIZE = 20;
+const MAJOR_MAX = Math.pow(2, MAJOR_BITSIZE) - 1;
+const MINOR_MAX = Math.pow(2, MINOR_BITSIZE) - 1;
+const MAJOR_MIN = 0;
+const MINOR_MIN = 0;
+
+class DeviceError extends Error {
+
+  constructor(code$$1, message) {
+    super(message);
+    this.code = code$$1;
+  }
+
+}
+
+Object.defineProperty(DeviceError, 'ERROR_RANGE', { value: 1 });
+
+Object.defineProperty(DeviceError, 'ERROR_CONFLICT', { value: 2 });
+
+class DeviceManager {
+
+  constructor() {
+    this._chrCounterMaj = new Counter(MAJOR_MIN);
+    this._chrDevices = new _Map();
+  }
+
+  getChr(major, minor) {
+    const devicesAndCounterMin = this._chrDevices.get(major);
+    if (devicesAndCounterMin) {
+      var _devicesAndCounterMin = _slicedToArray(devicesAndCounterMin, 1);
+
+      const devicesMin = _devicesAndCounterMin[0];
+
+      return devicesMin.get(minor);
+    }
+    return;
+  }
+
+  registerChr(device, major, minor) {
+    let autoAllocMaj;
+    let autoAllocMin;
+    let counterMin;
+    let devicesMin;
+    try {
+      if (major === undefined) {
+        major = this._chrCounterMaj.allocate();
+        autoAllocMaj = major;
+      } else {
+        const devicesCounterMin = this._chrDevices.get(major);
+        if (!devicesCounterMin) {
+          this._chrCounterMaj.allocate(major);
+          autoAllocMaj = major;
+        } else {
+          var _devicesCounterMin = _slicedToArray(devicesCounterMin, 2);
+
+          devicesMin = _devicesCounterMin[0];
+          counterMin = _devicesCounterMin[1];
+        }
+      }
+      if (!devicesMin || !counterMin) {
+        counterMin = new Counter(MINOR_MIN);
+        devicesMin = new _Map();
+      }
+      if (minor === undefined) {
+        minor = counterMin.allocate();
+        autoAllocMin = minor;
+      } else {
+        if (!devicesMin.has(minor)) {
+          counterMin.allocate(minor);
+          autoAllocMin = minor;
+        } else {
+          throw new DeviceError(DeviceError.ERROR_CONFLICT);
+        }
+      }
+      if (major > MAJOR_MAX || major < MAJOR_MIN || minor > MINOR_MAX || minor < MINOR_MIN) {
+        throw new DeviceError(DeviceError.ERROR_RANGE);
+      }
+      devicesMin.set(minor, device);
+      this._chrDevices.set(major, [devicesMin, counterMin]);
+      return;
+    } catch (e) {
+      if (autoAllocMaj != null) {
+        this._chrCounterMaj.deallocate(autoAllocMaj);
+      }
+      if (autoAllocMin != null && counterMin) {
+        counterMin.deallocate(autoAllocMin);
+      }
+      throw e;
+    }
+  }
+
+  deregisterChr(major, minor) {
+    const devicesCounterMin = this._chrDevices.get(major);
+    if (devicesCounterMin) {
+      var _devicesCounterMin2 = _slicedToArray(devicesCounterMin, 2);
+
+      const devicesMin = _devicesCounterMin2[0],
+            counterMin = _devicesCounterMin2[1];
+
+      if (devicesMin.delete(minor)) {
+        counterMin.deallocate(minor);
+      }
+      if (!devicesMin.size) {
+        this._chrDevices.delete(major);
+        this._chrCounterMaj.deallocate(major);
+      }
+    }
+    return;
+  }
+
+}
+
+function mkDev(major, minor) {
+  return major << MINOR_BITSIZE | minor;
+}
+
+function unmkDev(dev) {
+  const major = dev >> MINOR_BITSIZE;
+  const minor = dev & (1 << MINOR_BITSIZE) - 1;
+  return [major, minor];
+}
+
+// $FlowFixMe: Buffer exists
 /** @module INodes */
 
 /**
@@ -142,7 +375,7 @@ class INode {
   constructor(metadata, iNodeMgr) {
     const now = new Date();
     this._metadata = new Stat(_extends({}, metadata, {
-      mode: metadata.mode | constants.S_IRWXU | constants.S_IRWXG | constants.S_IRWXO,
+      mode: metadata.mode,
       nlink: metadata.nlink || 0,
       atime: now,
       mtime: now,
@@ -173,10 +406,12 @@ class File extends INode {
   constructor(props, iNodeMgr) {
     super({
       ino: props.ino,
-      mode: constants.S_IFREG,
-      size: props.data.byteLength
+      uid: props.uid,
+      gid: props.gid,
+      mode: constants.S_IFREG | props.mode & ~constants.S_IFMT,
+      size: props.data ? props.data.byteLength : 0
     }, iNodeMgr);
-    this._data = props.data;
+    this._data = props.data ? props.data : Buffer$1.allocUnsafe(0);
   }
 
   /**
@@ -192,6 +427,27 @@ class File extends INode {
   setData(data) {
     this._data = data;
     return;
+  }
+
+  read() {}
+
+  write(buffer$$1, position, append) {
+    let data = this._data;
+    let bytesWritten;
+    if (append) {
+      data = Buffer$1.concat([data, buffer$$1]);
+      bytesWritten = buffer$$1.length;
+    } else {
+      position = Math.min(data.length, position);
+      const overwrittenLength = data.length - position;
+      const extendedLength = buffer$$1.length - overwrittenLength;
+      if (extendedLength > 0) {
+        data = Buffer$1.concat([data, Buffer$1.allocUnsafe(extendedLength)]);
+      }
+      bytesWritten = buffer$$1.copy(data, position);
+    }
+    this._data = data;
+    return bytesWritten;
   }
 
   /**
@@ -215,33 +471,34 @@ class Directory extends INode {
    * If there's no parent inode, we assume this is the root directory.
    */
   constructor(props, iNodeMgr) {
-    // if we are at root, parent will equal current inode
-    // if so we start with an nlink of 2
-    // othewise increment the parent's nlink due to '..'
-    // and we start the nlink at 1, because the parent will increment this nlink
-    props.parent = props.parent || props.ino;
+    // root will start with an nlink of 2 due to '..'
+    // otherwise start with an nlink of 1
+    if (props.parent === undefined) props.parent = props.ino;
     let nlink;
     if (props.parent === props.ino) {
       nlink = 2;
     } else {
       nlink = 1;
-      iNodeMgr.linkINode(props.parent);
+      iNodeMgr.linkINode(iNodeMgr.getINode(props.parent));
     }
     super({
       ino: props.ino,
+      mode: constants.S_IFDIR | props.mode & ~constants.S_IFMT,
+      uid: props.uid,
+      gid: props.gid,
       nlink: nlink,
-      mode: constants.S_IFDIR,
       size: 0
     }, iNodeMgr);
     this._dir = new _Map([['.', props.ino], ['..', props.parent]]);
   }
 
   /**
-   * Gets all the names.
+   * Gets an iterator of name to iNode index.
+   * This prevents giving out mutability.
    */
   getEntries() {
     this._metadata.atime = new Date();
-    return this._dir;
+    return this._dir.entries();
   }
 
   /**
@@ -256,7 +513,7 @@ class Directory extends INode {
    */
   getEntry(name) {
     const index = this._dir.get(name);
-    if (index) {
+    if (index !== undefined) {
       return this._iNodeMgr.getINode(index);
     }
     return;
@@ -265,12 +522,16 @@ class Directory extends INode {
   /**
    * Add a name to inode index to this directory.
    * It will increment the link reference to the inode.
+   * It is not allowed to add entries with the names `.` and `..`.
    */
   addEntry(name, index) {
+    if (name === '.' || name === '..') {
+      throw new Error('Not allowed to add `.` or `..` entries');
+    }
     const now = new Date();
     this._metadata.mtime = now;
     this._metadata.ctime = now;
-    this._iNodeMgr.linkINode(index);
+    this._iNodeMgr.linkINode(this._iNodeMgr.getINode(index));
     this._dir.set(name, index);
     return;
   }
@@ -278,19 +539,19 @@ class Directory extends INode {
   /**
    * Delete a name in this directory.
    * It will decrement the link reference to the inode.
+   * It is not allowed to delete entries with the names `.` and `..`.
    */
   deleteEntry(name) {
+    if (name === '.' || name === '..') {
+      throw new Error('Not allowed to delete `.` or `..` entries');
+    }
     const index = this._dir.get(name);
-    if (index) {
+    if (index !== undefined) {
       const now = new Date();
       this._metadata.mtime = now;
       this._metadata.ctime = now;
       this._dir.delete(name);
-      const iNode = this._iNodeMgr.getINode(index);
-      if (iNode) {
-        iNode.destructor();
-        this._iNodeMgr.unlinkINode(index);
-      }
+      this._iNodeMgr.unlinkINode(this._iNodeMgr.getINode(index));
     }
     return;
   }
@@ -299,8 +560,11 @@ class Directory extends INode {
    * Rename a name in this directory.
    */
   renameEntry(oldName, newName) {
+    if (oldName === '.' || oldName === '..' || newName === '.' || oldName === '..') {
+      throw new Error('Not allowed to rename `.` or `..` entries');
+    }
     const index = this._dir.get(oldName);
-    if (index) {
+    if (index != null) {
       const now = new Date();
       this._metadata.mtime = now;
       this._metadata.ctime = now;
@@ -311,15 +575,17 @@ class Directory extends INode {
   }
 
   /**
-   * This is to be called by the INodeManager all hardlinks to this directory reduce to 0.
+   * This is to be called when all hardlinks and references to this directory reduce to 0.
+   * The destructor here is about unlinking the parent directory.
+   * Because the `..` will no longer exist.
    */
   destructor() {
-    // decrement the parent's nlink due to '..', do not do this on root
-    // otherwise there will be an infinite loop
+    // decrement the parent's nlink due to '..'
+    // however do not do this on root otherwise there will be an infinite loop
     if (this._dir.get('.') !== this._dir.get('..')) {
-      const index = this._dir.get('..');
-      if (index) {
-        this._iNodeMgr.unlinkINode(index);
+      const parentIndex = this._dir.get('..');
+      if (parentIndex != null) {
+        this._iNodeMgr.unlinkINode(this._iNodeMgr.getINode(parentIndex));
       }
     }
     return;
@@ -339,8 +605,10 @@ class Symlink extends INode {
   constructor(props, iNodeMgr) {
     super({
       ino: props.ino,
-      mode: constants.S_IFLNK,
-      size: Buffer.from(props.link).byteLength
+      mode: constants.S_IFLNK | props.mode & ~constants.S_IFMT,
+      uid: props.uid,
+      gid: props.gid,
+      size: Buffer$1.from(props.link).byteLength
     }, iNodeMgr);
     this._link = props.link;
   }
@@ -362,6 +630,42 @@ class Symlink extends INode {
 }
 
 /**
+ * Class representing a character device.
+ * @extends INode
+ */
+class CharacterDev extends INode {
+
+  /**
+   * Creates a character device.
+   */
+  constructor(props, iNodeMgr) {
+    super({
+      ino: props.ino,
+      mode: constants.S_IFCHR | props.mode & ~constants.S_IFMT,
+      uid: props.uid,
+      gid: props.gid,
+      rdev: props.rdev,
+      size: 0
+    }, iNodeMgr);
+  }
+
+  getFileDesOps() {
+    var _unmkDev = unmkDev(this.getMetadata().rdev),
+        _unmkDev2 = _slicedToArray(_unmkDev, 2);
+
+    const major = _unmkDev2[0],
+          minor = _unmkDev2[1];
+
+    return this._iNodeMgr._devMgr.getChr(major, minor);
+  }
+
+  destructor() {
+    return;
+  }
+
+}
+
+/**
  * Class that manages all iNodes including creation and deletion
  */
 class INodeManager {
@@ -370,33 +674,39 @@ class INodeManager {
    * Creates an instance of the INodeManager.
    * It starts the inode counter at 1, as 0 is usually reserved in posix filesystems.
    */
-  constructor() {
+  constructor(devMgr) {
     this._counter = new Counter(1);
-    this._inodes = new _Map();
+    this._iNodes = new _Map();
+    this._iNodeRefs = new _WeakMap();
+    this._devMgr = devMgr;
   }
 
   /**
    * Creates an inode, from a INode constructor function.
-   * The returned inode index must be added as an entry into a directory.
+   * The returned inode must be used and later manually deallocated.
    */
-  createINode(iNodeConstructor, props) {
+  createINode(iNodeConstructor, props = {}) {
     props.ino = this._counter.allocate();
-    this._inodes.set(props.ino, new iNodeConstructor(props, this));
-    return props.ino;
+    props.mode = typeof props.mode === 'number' ? props.mode : 0;
+    props.uid = typeof props.uid === 'number' ? props.uid : DEFAULT_ROOT_UID;
+    props.gid = typeof props.gid === 'number' ? props.gid : DEFAULT_ROOT_GID;
+    const iNode = new iNodeConstructor(props, this);
+    this._iNodes.set(props.ino, iNode);
+    this._iNodeRefs.set(iNode, 0);
+    return [iNode, props.ino];
   }
 
   /**
    * Gets the inode.
    */
   getINode(index) {
-    return this._inodes.get(index);
+    return this._iNodes.get(index);
   }
 
   /**
    * Links an inode, this increments the hardlink reference count.
    */
-  linkINode(index) {
-    const iNode = this._inodes.get(index);
+  linkINode(iNode) {
     if (iNode) {
       ++iNode.getMetadata().nlink;
     }
@@ -405,23 +715,104 @@ class INodeManager {
 
   /**
    * Unlinks an inode, this decrements the hardlink reference count.
-   * If the hardlink reference count reaches 0, the inode is garbage collected.
    */
-  unlinkINode(index) {
-    const iNode = this._inodes.get(index);
+  unlinkINode(iNode) {
     if (iNode) {
-      const metadata = iNode.getMetadata();
-      --metadata.nlink;
-      if (metadata.nlink === 0) {
-        this._inodes.delete(index);
-        this._counter.deallocate(index);
+      --iNode.getMetadata().nlink;
+      this._gcINode(iNode);
+    }
+    return;
+  }
+
+  /**
+   * References an inode, this increments the private reference count.
+   * Private reference count can be used by file descriptors and working directory position.
+   */
+  refINode(iNode) {
+    if (iNode) {
+      const refCount = this._iNodeRefs.get(iNode);
+      if (refCount !== undefined) {
+        this._iNodeRefs.set(iNode, refCount + 1);
       }
     }
     return;
   }
 
+  /**
+   * Unreferences an inode, this decrements the private reference count.
+   */
+  unrefINode(iNode) {
+    if (iNode) {
+      const refCount = this._iNodeRefs.get(iNode);
+      if (refCount !== undefined) {
+        this._iNodeRefs.set(iNode, refCount - 1);
+        this._gcINode(iNode);
+      }
+    }
+    return;
+  }
+
+  /**
+   * Decides whether to garbage collect the inode.
+   * The true usage count is the hardlink count plus the private reference count.
+   * Usually if the true usage count is 0, then the inode is garbage collected.
+   * However directories are special cased here, due to the `.` circular hardlink.
+   * This allows directories to be garbage collected even when their usage count is 1.
+   * This is possible also because there cannot be custom hardlinks to directories.
+   */
+  _gcINode(iNode) {
+    const metadata = iNode.getMetadata();
+    const useCount = metadata.nlink + this._iNodeRefs.get(iNode);
+    if (useCount === 0 || useCount === 1 && iNode instanceof Directory) {
+      const index = metadata.ino;
+      iNode.destructor();
+      this._iNodes.delete(index);
+      this._counter.deallocate(index);
+    }
+  }
+
 }
 
+/** @module VirtualFSError */
+
+/**
+ * Class representing a file system error.
+ * @extends Error
+ */
+class VirtualFSError extends Error {
+
+  /**
+   * Creates VirtualFSError.
+   */
+  constructor(errnoObj, path, dest, syscall) {
+    let message = errnoObj.code + ': ' + errnoObj.description;
+    if (path != null) {
+      message += ', ' + path;
+      if (dest != null) message += ' -> ' + dest;
+    }
+    super(message);
+    this.errno = errnoObj.errno;
+    this.code = errnoObj.code;
+    this.errnoDescription = errnoObj.description;
+    if (syscall != null) {
+      this.syscall = syscall;
+    }
+  }
+
+  setPaths(src, dst) {
+    let message = this.code + ': ' + this.errnoDescription + ', ' + src;
+    if (dst != null) message += ' -> ' + dst;
+    this.message = message;
+    return;
+  }
+
+  setSyscall(syscall) {
+    this.syscall = syscall;
+  }
+
+}
+
+// $FlowFixMe: Buffer exists
 /** @module FileDescriptors */
 
 /**
@@ -433,8 +824,8 @@ class FileDescriptor {
    * Creates FileDescriptor
    * Starts the seek position at 0
    */
-  constructor(inode, flags) {
-    this._inode = inode;
+  constructor(iNode, flags) {
+    this._iNode = iNode;
     this._flags = flags;
     this._pos = 0;
   }
@@ -443,7 +834,7 @@ class FileDescriptor {
    * Gets an INode.
    */
   getINode() {
-    return this._inode;
+    return this._iNode;
   }
 
   /**
@@ -471,17 +862,43 @@ class FileDescriptor {
 
   /**
    * Sets the file descriptor position.
-   * @throws {TypeError} Will throw if not a File INode
    */
-  setPos(pos) {
-    // if we seek pass the end of the file, it should keep the length of the data
+  setPos(pos, flags = constants.SEEK_SET) {
     const iNode = this.getINode();
+    let newPos;
     switch (true) {
       case iNode instanceof File:
-        const data = iNode.getData();
-        this._pos = Math.min(data.length, pos);
+      case iNode instanceof Directory:
+        switch (flags) {
+          case constants.SEEK_SET:
+            newPos = pos;
+            break;
+          case constants.SEEK_CUR:
+            newPos = this._pos + pos;
+            break;
+          case constants.SEEK_END:
+            newPos = iNode.getData().length + pos;
+            break;
+          default:
+            newPos = this._pos;
+        }
+        if (newPos < 0) {
+          throw new VirtualFSError(code.EINVAL);
+        }
+        this._pos = newPos;
+        break;
+      case iNode instanceof CharacterDev:
+        const fops = iNode.getFileDesOps();
+        if (!fops) {
+          throw new VirtualFSError(code.ENXIO);
+        } else if (!fops.setPos) {
+          throw new VirtualFSError(code.ESPIPE);
+        } else {
+          fops.setPos(this, pos, flags);
+        }
+        break;
       default:
-        throw new TypeError('Invalid INode type for seeking');
+        throw new VirtualFSError(code.ESPIPE);
     }
   }
 
@@ -489,8 +906,7 @@ class FileDescriptor {
    * Reads from this file descriptor into a buffer.
    * It will always try to fill the input buffer.
    * If position is specified, the position change does not persist.
-   * If the current file descriptor position is greater than the length of the data, this will read 0 bytes.
-   * @throws {TypeError} Will throw if not a File INode
+   * If the current file descriptor position is greater than or equal to the length of the data, this will read 0 bytes.
    */
   read(buffer$$1, position = null) {
     let currentPosition;
@@ -499,7 +915,7 @@ class FileDescriptor {
     } else {
       currentPosition = position;
     }
-    const iNode = this._inode;
+    const iNode = this._iNode;
     let bytesRead;
     switch (true) {
       case iNode instanceof File:
@@ -508,8 +924,18 @@ class FileDescriptor {
         bytesRead = data.copy(buffer$$1, 0, currentPosition);
         metadata.atime = new Date();
         break;
+      case iNode instanceof CharacterDev:
+        const fops = iNode.getFileDesOps();
+        if (!fops) {
+          throw new VirtualFSError(code.ENXIO);
+        } else if (!fops.read) {
+          throw new VirtualFSError(code.EINVAL);
+        } else {
+          bytesRead = fops.read(this, buffer$$1, currentPosition);
+        }
+        break;
       default:
-        throw new TypeError('Invalid INode type for read');
+        throw new VirtualFSError(code.EINVAL);
     }
     if (position === null) {
       this._pos = currentPosition + bytesRead;
@@ -520,7 +946,6 @@ class FileDescriptor {
   /**
    * Writes to this file descriptor.
    * If position is specified, the position change does not persist.
-   * @throws {TypeError} Will throw if not a File INode
    */
   write(buffer$$1, position = null, extraFlags = 0) {
     let currentPosition;
@@ -529,7 +954,7 @@ class FileDescriptor {
     } else {
       currentPosition = position;
     }
-    const iNode = this._inode;
+    const iNode = this._iNode;
     let bytesWritten;
     switch (true) {
       case iNode instanceof File:
@@ -537,14 +962,17 @@ class FileDescriptor {
         const metadata = iNode.getMetadata();
         if ((this.getFlags() | extraFlags) & constants.O_APPEND) {
           currentPosition = data.length;
-          data = Buffer.concat([data, buffer$$1]);
+          data = Buffer$1.concat([data, buffer$$1]);
           bytesWritten = buffer$$1.length;
         } else {
-          currentPosition = Math.min(data.length, currentPosition);
-          const overwrittenLength = data.length - currentPosition;
-          const extendedLength = buffer$$1.length - overwrittenLength;
-          if (extendedLength > 0) {
-            data = Buffer.concat([data, Buffer.allocUnsafe(extendedLength)]);
+          if (currentPosition > data.length) {
+            data = Buffer$1.concat([data, Buffer$1.alloc(currentPosition - data.length), Buffer$1.allocUnsafe(buffer$$1.length)]);
+          } else if (currentPosition <= data.length) {
+            const overwrittenLength = data.length - currentPosition;
+            const extendedLength = buffer$$1.length - overwrittenLength;
+            if (extendedLength > 0) {
+              data = Buffer$1.concat([data, Buffer$1.allocUnsafe(extendedLength)]);
+            }
           }
           bytesWritten = buffer$$1.copy(data, currentPosition);
         }
@@ -554,46 +982,23 @@ class FileDescriptor {
         metadata.ctime = now;
         metadata.size = data.length;
         break;
+      case iNode instanceof CharacterDev:
+        const fops = iNode.getFileDesOps();
+        if (!fops) {
+          throw new VirtualFSError(code.ENXIO);
+        } else if (!fops.write) {
+          throw new VirtualFSError(code.EINVAL);
+        } else {
+          bytesWritten = fops.write(this, buffer$$1, currentPosition, extraFlags);
+        }
+        break;
       default:
-        throw new TypeError('Invalid INode type for write');
+        throw new VirtualFSError(code.EINVAL);
     }
     if (position === null) {
       this._pos = currentPosition + bytesWritten;
     }
     return bytesWritten;
-  }
-
-  /**
-   * Truncates this file descriptor.
-   * @throws {TypeError} Will throw if not a File INode
-   */
-  truncate(len = 0) {
-    const iNode = this._inode;
-    switch (true) {
-      case iNode instanceof File:
-        const data = iNode.getData();
-        const metadata = iNode.getMetadata();
-        let newData;
-        if (len > data.length) {
-          newData = Buffer.alloc(len);
-          data.copy(newData, 0, 0, data.length);
-          iNode.setData(newData);
-        } else if (len < data.length) {
-          newData = Buffer.allocUnsafe(len);
-          data.copy(newData, 0, 0, len);
-          iNode.setData(newData);
-        } else {
-          newData = data;
-        }
-        const now = new Date();
-        metadata.mtime = now;
-        metadata.ctime = now;
-        metadata.size = newData.length;
-        this._pos = Math.min(newData.length, this._pos);
-        return;
-      default:
-        throw new TypeError('Invalid INode type for truncate');
-    }
   }
 
 }
@@ -608,20 +1013,32 @@ class FileDescriptorManager {
    * It starts the fd counter at 0.
    * Make sure not get real fd numbers confused with these fd numbers.
    */
-  constructor() {
+  constructor(iNodeMgr) {
     this._counter = new Counter(0);
     this._fds = new _Map();
+    this._iNodeMgr = iNodeMgr;
   }
 
   /**
    * Creates a file descriptor.
-   * While a file descriptor is opened, the underlying iNode can still be garbage collected by the INodeManager, but it won't be garbage collected by JavaScript runtime.
+   * This will increment the reference to the iNode preventing garbage collection by the INodeManager.
    */
-  createFd(inode, flags) {
+  createFd(iNode, flags) {
+    this._iNodeMgr.refINode(iNode);
     const index = this._counter.allocate();
-    const fd = new FileDescriptor(inode, flags);
+    const fd = new FileDescriptor(iNode, flags);
+    if (iNode instanceof CharacterDev) {
+      const fops = iNode.getFileDesOps();
+      if (!fops) {
+        throw new VirtualFSError(code.ENXIO);
+      } else if (fops.open) {
+        fops.open(fd);
+      }
+    }
+
     this._fds.set(index, fd);
-    return { index: index, fd: fd };
+
+    return [fd, index];
   }
 
   /**
@@ -632,17 +1049,46 @@ class FileDescriptorManager {
   }
 
   /**
+   * Duplicates file descriptor index.
+   * It may return a new file descriptor index that points to the same file descriptor.
+   */
+  dupFd(index) {
+    const fd = this._fds.get(index);
+    if (fd) {
+      this._iNodeMgr.refINode(fd.getINode());
+      const dupIndex = this._counter.allocate();
+      this._fds.set(dupIndex, fd);
+      return index;
+    }
+  }
+
+  /**
    * Deletes a file descriptor.
    * This effectively closes the file descriptor.
+   * This will decrement the reference to the iNode allowing garbage collection by the INodeManager.
    */
-  deleteFd(index) {
-    this._counter.deallocate(index);
-    this._fds.delete(index);
+  deleteFd(fdIndex) {
+    const fd = this._fds.get(fdIndex);
+    if (fd) {
+      const iNode = fd.getINode();
+      if (iNode instanceof CharacterDev) {
+        const fops = iNode.getFileDesOps();
+        if (!fops) {
+          throw new VirtualFSError(code.ENXIO);
+        } else if (fops.close) {
+          fops.close(fd);
+        }
+      }
+      this._fds.delete(fdIndex);
+      this._counter.deallocate(fdIndex);
+      this._iNodeMgr.unrefINode(iNode);
+    }
     return;
   }
 
 }
 
+// $FlowFixMe: Buffer exists
 /** @module Streams */
 
 /**
@@ -658,6 +1104,7 @@ class ReadStream extends Readable {
    */
   constructor(path, options, fs) {
     super({
+      highWaterMark: options.highWaterMark,
       encoding: options.encoding
     });
     this._fs = fs;
@@ -665,10 +1112,11 @@ class ReadStream extends Readable {
     this.path = path;
     this.fd = options.fd === undefined ? null : options.fd;
     this.flags = options.flags === undefined ? 'r' : options.flags;
+    this.mode = options.mode === undefined ? DEFAULT_FILE_PERM : options.mode;
     this.autoClose = options.autoClose === undefined ? true : options.autoClose;
     this.start = options.start;
-    this.end = options.end;
-    this.done = false;
+    this.end = options.end === undefined ? Infinity : options.end;
+    this.pos = options.start;
     if (typeof this.fd !== 'number') {
       this._open();
     }
@@ -684,7 +1132,7 @@ class ReadStream extends Readable {
    * @private
    */
   _open() {
-    this._fs.open(this.path, this.flags, (e, fd) => {
+    this._fs.open(this.path, this.flags, this.mode, (e, fd) => {
       if (e) {
         if (this.autoClose) {
           super.destroy();
@@ -699,37 +1147,46 @@ class ReadStream extends Readable {
   }
 
   /**
-   * Read hook for stream implementation.
-   * Because this is an in memory filesystem, we can push the entire buffer once on the first read.
-   * This does not get affected by the highwater mark.
+   * Asynchronous read hook for stream implementation.
+   * The size passed into this function is not the requested size, but the high watermark.
+   * It's just a heuristic buffering size to avoid sending to many syscalls.
+   * However since this is an in-memory filesystem, the size itself is irrelevant.
    * @private
    */
   _read(size) {
     if (typeof this.fd !== 'number') {
-      return super.once('open', () => {
+      super.once('open', () => {
         this._read(size);
       });
-    }
-    if (this.destroyed) return;
-    if (this.done) return;
-    let buffer$$1;
-    try {
-      buffer$$1 = this._fs.readFileSync(this.fd);
-      this.done = true;
-    } catch (e) {
-      super.emit('error', e);
-      if (this.autoClose) {
-        super.destroy();
-      }
       return;
     }
-    if (typeof this.start === 'number') {
-      buffer$$1 = buffer$$1.slice(this.start, this.end + 1);
+    if (this.destroyed) return;
+    // this.pos is only ever used if this.start is specified
+    if (this.pos != null) {
+      size = Math.min(this.end - this.pos + 1, size);
     }
-    super.push(buffer$$1);
-    super.push(null);
-    this.bytesRead = buffer$$1.length;
-    return;
+    if (size <= 0) {
+      this.push(null);
+      return;
+    }
+    this._fs.read(this.fd, Buffer$1.allocUnsafe(size), 0, size, this.pos, (e, bytesRead, buf) => {
+      if (e) {
+        if (this.autoClose) {
+          this.destroy();
+        }
+        super.emit('error', e);
+        return;
+      }
+      if (bytesRead > 0) {
+        this.bytesRead += bytesRead;
+        this.push(buf.slice(0, bytesRead));
+      } else {
+        this.push(null);
+      }
+    });
+    if (this.pos != null) {
+      this.pos += size;
+    }
   }
 
   /**
@@ -757,7 +1214,7 @@ class ReadStream extends Readable {
       return;
     }
     if (this.closed) {
-      return _setImmediate(() => super.emit('close'));
+      return nextTick(() => super.emit('close'));
     }
     this.closed = true;
     this._fs.close(this.fd, e => {
@@ -782,12 +1239,15 @@ class WriteStream extends Writable {
    * Creates WriteStream.
    */
   constructor(path, options, fs) {
-    super();
+    super({
+      highWaterMark: options.highWaterMark
+    });
     this._fs = fs;
     this.bytesWritten = 0;
     this.path = path;
     this.fd = options.fd === undefined ? null : options.fd;
     this.flags = options.flags === undefined ? 'w' : options.flags;
+    this.mode = options.mode === undefined ? DEFAULT_FILE_PERM : options.mode;
     this.autoClose = options.autoClose === undefined ? true : options.autoClose;
     this.start = options.start;
     this.pos = this.start; // WriteStream maintains its own position
@@ -810,7 +1270,7 @@ class WriteStream extends Writable {
    * @private
    */
   _open() {
-    this._fs.open(this.path, this.flags, (e, fd) => {
+    this._fs.open(this.path, this.flags, this.mode, (e, fd) => {
       if (e) {
         if (this.autoClose) {
           super.destroy();
@@ -824,7 +1284,7 @@ class WriteStream extends Writable {
   }
 
   /**
-   * Write hook for stream implementation.
+   * Asynchronous write hook for stream implementation.
    * @private
    */
   _write(data, encoding, cb) {
@@ -833,18 +1293,20 @@ class WriteStream extends Writable {
         this._write(data, encoding, cb);
       });
     }
-    try {
-      this.bytesWritten += this._fs.writeSync(this.fd, data, 0, data.length, this.pos);
-    } catch (e) {
-      if (this.autoClose) {
-        super.destroy();
+    this._fs.write(this.fd, data, 0, data.length, this.pos, (e, bytesWritten) => {
+      if (e) {
+        if (this.autoClose) {
+          super.destroy();
+        }
+        cb(e);
+        return;
       }
-      return cb(e);
-    }
+      this.bytesWritten += bytesWritten;
+      cb();
+    });
     if (this.pos !== undefined) {
       this.pos += data.length;
     }
-    return cb();
   }
 
   /**
@@ -852,7 +1314,7 @@ class WriteStream extends Writable {
    * @private
    */
   _writev(chunks, cb) {
-    this._write(Buffer.concat(chunks.map(chunk => chunk.chunk)), undefined, cb);
+    this._write(Buffer$1.concat(chunks.map(chunk => chunk.chunk)), undefined, cb);
     return;
   }
 
@@ -881,7 +1343,7 @@ class WriteStream extends Writable {
       return;
     }
     if (this.closed) {
-      return _setImmediate(() => super.emit('close'));
+      return nextTick(() => super.emit('close'));
     }
     this.closed = true;
     this._fs.close(this.fd, e => {
@@ -905,34 +1367,16 @@ class WriteStream extends Writable {
 
 }
 
+// $FlowFixMe: Buffer exists
+
 /** @module VirtualFS */
 
 /**
- * Class representing a file system error.
- * @extends Error
+ * Asynchronous callback backup.
  */
-class VirtualFSError extends Error {
-
-  /**
-   * Creates VirtualFSError.
-   */
-  constructor(errorSys, path = null, dest = null, syscall = null) {
-    let message = errorSys.code + ': ' + errorSys.description;
-    if (path) {
-      message += ', ' + path;
-      if (dest) {
-        message += ' -> ' + dest;
-      }
-    }
-    super(message);
-    this.errno = errorSys.errno;
-    this.code = errorSys.code;
-    if (syscall) {
-      this.syscall = syscall;
-    }
-  }
-
-}
+const callbackUp = err => {
+  if (err) throw err;
+};
 
 /**
  * Class representing a virtual filesystem.
@@ -942,446 +1386,535 @@ class VirtualFS {
   /**
    * Creates VirtualFS.
    */
-  constructor() {
-    this._inodeMgr = new INodeManager();
-    this._fdMgr = new FileDescriptorManager();
-    let rootIndex = this._inodeMgr.createINode(Directory, {});
-    this._root = this._inodeMgr.getINode(rootIndex);
+  constructor(umask = 0o022, rootIndex = null, devMgr = new DeviceManager(), iNodeMgr = new INodeManager(devMgr), fdMgr = new FileDescriptorManager(iNodeMgr)) {
+    let rootNode;
+    if (typeof rootIndex === 'number') {
+      rootNode = iNodeMgr.getINode(rootIndex);
+      if (!(rootNode instanceof Directory)) {
+        throw TypeError('rootIndex must point to a root directory');
+      }
+    } else {
+      var _iNodeMgr$createINode = iNodeMgr.createINode(Directory, { mode: DEFAULT_ROOT_PERM, uid: DEFAULT_ROOT_UID, gid: DEFAULT_ROOT_GID });
+
+      var _iNodeMgr$createINode2 = _slicedToArray(_iNodeMgr$createINode, 1);
+
+      rootNode = _iNodeMgr$createINode2[0];
+    }
+    this._uid = DEFAULT_ROOT_UID;
+    this._gid = DEFAULT_ROOT_GID;
+    this._umask = umask;
+    this._devMgr = devMgr;
+    this._iNodeMgr = iNodeMgr;
+    this._fdMgr = fdMgr;
+    this._root = rootNode;
+    this._cwd = new CurrentDirectory(iNodeMgr, rootNode);
     this.constants = constants;
     this.ReadStream = ReadStream;
     this.WriteStream = WriteStream;
   }
 
-  /**
-   * Takes a callback, and if undefined, will return a default callback.
-   * Used for asynchronous calling styles in accordance with Node behaviour.
-   * @private
-   */
-  _maybeCallback(callback) {
-    return typeof callback === 'function' ? callback : err => {
-      if (err) throw err;
-    };
+  getUmask() {
+    return this._umask;
   }
 
-  /**
-   * Sets up an asynchronous call in accordance with Node behaviour.
-   * @private
-   */
-  _callAsync(syncFn, args, successCall, failCall) {
-    try {
-      let result = syncFn(...args);
-      result = result === undefined ? null : result;
-      _setImmediate(() => {
-        successCall(result);
-      });
-    } catch (e) {
-      _setImmediate(() => {
-        failCall(e);
-      });
-    }
-    return;
+  setUmask(umask) {
+    this._umask = umask;
   }
 
-  /**
-   * Takes a default set of options, and merges them into the user provided options.
-   * This will also do a shallow clone of the options object so mutations on it won't affect the user supplied object.
-   * @private
-   */
-  _getOptions(defaultOptions, options) {
-    if (typeof options === 'string') {
-      return _extends({}, defaultOptions, { encoding: options });
-    } else {
-      return _extends({}, defaultOptions, options);
-    }
+  getUid() {
+    return this._uid;
   }
 
-  /**
-   * Parses and extracts the first path segment.
-   * @private
-   */
-  _parsePath(pathS) {
-    const matches = pathS.match(/^([\s\S]*?)(?:\/+|$)([\s\S]*)/);
-    if (matches) {
-      let segment = matches[1] || '';
-      let rest = matches[2] || '';
-      return {
-        segment: segment,
-        rest: rest
-      };
-    } else {
-      // this should not happen
-      throw new Error('Could not parse pathS: ' + pathS);
-    }
+  setUid(uid) {
+    this._uid = uid;
   }
 
-  /**
-   * Navigates the filesystem tree from root.
-   * You can interpret the results like:
-   *   target && !name  => dir is at /
-   *   !target && !name => empty target with a remaining path, this generally means ENOENT
-   *   !target && name  => empty target with a possible remaining path, this can mean ENOENT
-   * This also builds the canonical path to the target (even when the target doesn't exist)
-   * @private
-   * @throws {VirtualFSError|TypeError} Will throw ENOENT if pathS is empty, should not throw TypeError
-   */
-  _navigate(pathS, resolveLastLink = true, activeSymlinks = new _Set()) {
-    if (!pathS) {
-      throw new VirtualFSError(errno.code.ENOENT, pathS);
-    }
-    // at root consider that: '/a', 'a', '/a', './a', '../a' are all the same
-    // so we canonicalise all of these to just 'a'
-    pathS = pathS.replace(/^\.{1,2}\/|\/+/, '');
-    // if it is empty now, this means there was just /
-    if (pathS === '') {
-      return {
-        dir: this._root,
-        target: this._root,
-        name: null,
-        remaining: '',
-        path: '/'
-      };
-    }
-    return this._navigateFrom(this._root, pathS, resolveLastLink, activeSymlinks);
+  getGid() {
+    return this._gid;
   }
 
-  /**
-   * Navigates the filesystem tree from a given directory.
-   * @private
-   * @throws {VirtualFSError|TypeError} Will throw ENOENT if pathS is empty, should not throw TypeError
-   */
-  _navigateFrom(curdir, pathS, resolveLastLink = true, activeSymlinks = new _Set(), pathStack = []) {
-    if (!pathS) {
-      throw new VirtualFSError(errno.code.ENOENT, pathS);
-    }
-    let parse = this._parsePath(pathS);
-    if (parse.segment !== '.') {
-      if (parse.segment === '..') {
-        pathStack.pop(); // this is a noop if the pathStack is empty
-      } else {
-        pathStack.push(parse.segment);
-      }
-    }
-    let target = curdir.getEntry(parse.segment);
-    if (target === undefined) {
-      return {
-        dir: curdir,
-        target: null,
-        name: parse.segment,
-        remaining: parse.rest,
-        path: '/' + pathStack.join('/')
-      };
-    }
-    switch (true) {
-      case target instanceof File:
-        if (!parse.rest) {
-          return {
-            dir: curdir,
-            target: target,
-            name: parse.segment,
-            remaining: parse.rest,
-            path: '/' + pathStack.join('/')
-          };
-        }
-        return {
-          dir: curdir,
-          target: null,
-          name: null,
-          remaining: parse.rest,
-          path: '/' + pathStack.join('/')
-        };
-      case target instanceof Directory:
-        if (!parse.rest) {
-          return {
-            dir: curdir,
-            target: target,
-            name: parse.segment,
-            remaining: parse.rest,
-            path: '/' + pathStack.join('/')
-          };
-        }
-        return this._navigateFrom(target, parse.rest, resolveLastLink, activeSymlinks, pathStack);
-      case target instanceof Symlink:
-        if (!resolveLastLink && !parse.rest) {
-          return {
-            dir: curdir,
-            target: target,
-            name: parse.segment,
-            remaining: parse.rest,
-            path: '/' + pathStack.join('/')
-          };
-        }
-        if (activeSymlinks.has(target)) {
-          throw new VirtualFSError(errno.code.ELOOP, pathS);
-        } else {
-          activeSymlinks.add(target);
-        }
-        pathStack.pop();
-        const symlink = join(target.getLink(), parse.rest);
-        if (symlink[0] === '/') {
-          return this._navigate(symlink, resolveLastLink, activeSymlinks);
-        } else {
-          return this._navigateFrom(curdir, symlink, resolveLastLink, activeSymlinks, pathStack);
-        }
-      default:
-        throw new TypeError('Non-exhaustive pattern matching');
-    }
+  setGid(gid) {
+    this._gid = gid;
   }
 
-  access(pathS, ...args) {
+  getCwd() {
+    return this._cwd.getPath();
+  }
+
+  chdir(path) {
+    path = this._getPath(path);
+    const navigated = this._navigate(path, true);
+    if (!navigated.target) {
+      throw new VirtualFSError(code.ENOENT, path);
+    }
+    if (!(navigated.target instanceof Directory)) {
+      throw new VirtualFSError(code.ENOTDIR, path);
+    }
+    if (!this._checkPermissions(constants.X_OK, navigated.target.getMetadata())) {
+      throw new VirtualFSError(code.EACCES, path);
+    }
+    this._cwd.changeDir(navigated.target, navigated.pathStack);
+  }
+
+  access(path, ...args) {
     let cbIndex = args.findIndex(arg => typeof arg === 'function');
-    const callback = this._maybeCallback(args[cbIndex]);
+    const callback = args[cbIndex] || callbackUp;
     cbIndex = cbIndex >= 0 ? cbIndex : args.length;
-    this._callAsync(this.accessSync.bind(this), [pathS, ...args.slice(0, cbIndex)], callback, callback);
+    this._callAsync(this.accessSync.bind(this), [path, ...args.slice(0, cbIndex)], callback, callback);
     return;
   }
 
-  accessSync(pathS, mode) {
-    if (mode == undefined) {
-      mode = this.constants.F_OK;
-    }
-    const target = this._navigate(pathS, true).target;
+  accessSync(path, mode = constants.F_OK) {
+    path = this._getPath(path);
+    const target = this._navigate(path, true).target;
     if (!target) {
-      throw new VirtualFSError(errno.code.ENOENT, pathS);
+      throw new VirtualFSError(code.ENOENT, path);
     }
-    const targetMode = target.getMetadata().mode;
-    // our filesystem has no notion of users, groups and other
-    // so we just directly map the access flags to user permissions flags
-    let userMode = 0;
-    switch (mode) {
-      case this.constants.R_OK:
-        userMode |= this.constants.S_IRUSR;
-      case this.constants.W_OK:
-        userMode |= this.constants.S_IWUSR;
-      case this.constants.X_OK:
-        userMode |= this.constants.S_IXUSR;
+    if (mode === constants.F_OK) {
+      return;
     }
-    if ((targetMode & userMode) !== userMode) {
-      throw new VirtualFSError(errno.code.EACCES, pathS);
+    if (!this._checkPermissions(mode, target.getMetadata())) {
+      throw new VirtualFSError(code.EACCES, path);
     }
   }
 
   appendFile(file, data, ...args) {
     let cbIndex = args.findIndex(arg => typeof arg === 'function');
-    const callback = this._maybeCallback(args[cbIndex]);
+    const callback = args[cbIndex] || callbackUp;
     cbIndex = cbIndex >= 0 ? cbIndex : args.length;
     this._callAsync(this.appendFileSync.bind(this), [file, data, ...args.slice(0, cbIndex)], callback, callback);
     return;
   }
 
   appendFileSync(file, data = 'undefined', options) {
-    options = this._getOptions({ encoding: 'utf8', flag: 'a' }, options);
-    if (!(data instanceof Buffer)) {
-      data = Buffer.from(data.toString(), options.encoding);
-    }
+    options = this._getOptions({
+      encoding: 'utf8',
+      mode: DEFAULT_FILE_PERM,
+      flag: 'a'
+    }, options);
+    data = this._getBuffer(data, options.encoding);
     let fdIndex;
-    let fd;
-    if (typeof file === 'string') {
-      fdIndex = this.openSync(file, options.flag);
-      fd = this._fdMgr.getFd(fdIndex);
-    } else if (typeof file === 'number') {
-      fd = this._fdMgr.getFd(file);
-    } else {
-      throw TypeError('file must be a string or number');
-    }
-    if (!fd) {
-      throw new VirtualFSError(errno.code.EBADF, null, null, 'appendFile');
-    }
     try {
-      fd.write(data, null, constants.O_APPEND);
-    } catch (e) {
-      if (e instanceof RangeError) {
-        throw new VirtualFSError(errno.code.ENOSPC, null, null, 'appendFile');
+      let fd;
+      if (typeof file === 'number') {
+        fd = this._fdMgr.getFd(file);
+        if (!fd) throw new VirtualFSError(code.EBADF, null, null, 'appendFile');
+        if (!(fd.getFlags() & (constants.O_WRONLY | constants.O_RDWR))) {
+          throw new VirtualFSError(code.EBADF, null, null, 'appendFile');
+        }
+      } else {
+        var _openSync = this._openSync(file, options.flag, options.mode);
+
+        var _openSync2 = _slicedToArray(_openSync, 2);
+
+        fd = _openSync2[0];
+        fdIndex = _openSync2[1];
       }
-      throw e;
-    }
-    if (fdIndex !== undefined) this.closeSync(fdIndex);
-    return;
-  }
-
-  chmod(pathS, mode, callback) {
-    callback = this._maybeCallback(callback);
-    this._callAsync(this.chmodSync.bind(this), [pathS, mode], callback, callback);
-    return;
-  }
-
-  chmodSync(pathS, mode) {
-    if (!this._navigate(pathS, true).target) {
-      throw new VirtualFSError(errno.code.ENOENT, pathS);
+      try {
+        fd.write(data, null, constants.O_APPEND);
+      } catch (e) {
+        if (e instanceof RangeError) {
+          throw new VirtualFSError(code.EFBIG, null, null, 'appendFile');
+        }
+        throw e;
+      }
+    } finally {
+      if (fdIndex !== undefined) this.closeSync(fdIndex);
     }
     return;
   }
 
-  chown(pathS, uid, gid, callback) {
-    callback = this._maybeCallback(callback);
-    this._callAsync(this.chownSync.bind(this), [pathS, uid, gid], callback, callback);
+  chmod(path, mode, callback = callbackUp) {
+    this._callAsync(this.chmodSync.bind(this), [path, mode], callback, callback);
     return;
   }
 
-  chownSync(pathS, uid, gid) {
-    if (!this._navigate(pathS, true).target) {
-      throw new VirtualFSError(errno.code.ENOENT, pathS);
+  chmodSync(path, mode) {
+    path = this._getPath(path);
+    const target = this._navigate(path, true).target;
+    if (!target) {
+      throw new VirtualFSError(code.ENOENT, path);
+    }
+    if (typeof mode !== 'number') {
+      throw new TypeError('mode must be an integer');
+    }
+    const targetMetadata = target.getMetadata();
+    if (this._uid !== DEFAULT_ROOT_UID && this._uid !== targetMetadata.uid) {
+      throw new VirtualFSError(code.EPERM, null, null, 'chmod');
+    }
+    targetMetadata.mode = targetMetadata.mode & constants.S_IFMT | mode;
+    return;
+  }
+
+  chown(path, uid, gid, callback = callbackUp) {
+    this._callAsync(this.chownSync.bind(this), [path, uid, gid], callback, callback);
+    return;
+  }
+
+  chownSync(path, uid, gid) {
+    path = this._getPath(path);
+    const target = this._navigate(path, true).target;
+    if (!target) {
+      throw new VirtualFSError(code.ENOENT, path);
+    }
+    const targetMetadata = target.getMetadata();
+    if (this._uid !== DEFAULT_ROOT_UID) {
+      // you don't own the file
+      if (targetMetadata.uid !== this._uid) {
+        throw new VirtualFSError(code.EPERM, null, null, 'chown');
+      }
+      // you cannot give files to others
+      if (this._uid !== uid) {
+        throw new VirtualFSError(code.EPERM, null, null, 'chown');
+      }
+      // because we don't have user group hierarchies, we allow chowning to any group
+    }
+    if (typeof uid === 'number') {
+      targetMetadata.uid = uid;
+    }
+    if (typeof gid === 'number') {
+      targetMetadata.gid = gid;
     }
     return;
   }
 
-  close(fdIndex, callback) {
-    callback = this._maybeCallback(callback);
+  close(fdIndex, callback = callbackUp) {
     this._callAsync(this.closeSync.bind(this), [fdIndex], callback, callback);
     return;
   }
 
   closeSync(fdIndex) {
     if (!this._fdMgr.getFd(fdIndex)) {
-      throw new VirtualFSError(errno.code.EBADF, null, null, 'close');
+      throw new VirtualFSError(code.EBADF, null, null, 'close');
     }
     this._fdMgr.deleteFd(fdIndex);
     return;
   }
 
-  createReadStream(pathS, options) {
+  copyFile(srcPath, dstPath, ...args) {
+    let cbIndex = args.findIndex(arg => typeof arg === 'function');
+    const callback = args[cbIndex] || callbackUp;
+    cbIndex = cbIndex >= 0 ? cbIndex : args.length;
+    this._callAsync(this.copyFileSync.bind(this), [srcPath, dstPath, ...args.slice(0, cbIndex)], callback, callback);
+    return;
+  }
+
+  copyFileSync(srcPath, dstPath, flags = 0) {
+    srcPath = this._getPath(srcPath);
+    dstPath = this._getPath(dstPath);
+    let srcFd;
+    let srcFdIndex;
+    let dstFd;
+    let dstFdIndex;
+    try {
+      var _openSync3 = this._openSync(srcPath, constants.O_RDONLY);
+      // the only things that are copied is the data and the mode
+
+
+      var _openSync4 = _slicedToArray(_openSync3, 2);
+
+      srcFd = _openSync4[0];
+      srcFdIndex = _openSync4[1];
+
+      const srcINode = srcFd.getINode();
+      if (srcINode instanceof Directory) {
+        throw new VirtualFSError(code.EBADF, srcPath, dstPath);
+      }
+      let dstFlags = constants.WRONLY | constants.O_CREAT;
+      if (flags & constants.COPYFILE_EXCL) {
+        dstFlags |= constants.O_EXCL;
+      }
+
+      var _openSync5 = this._openSync(dstPath, dstFlags, srcINode.getMetadata().mode);
+
+      var _openSync6 = _slicedToArray(_openSync5, 2);
+
+      dstFd = _openSync6[0];
+      dstFdIndex = _openSync6[1];
+
+      const dstINode = dstFd.getINode();
+      if (dstINode instanceof File) {
+        dstINode.setData(Buffer$1.from(srcINode.getData()));
+      } else {
+        throw new VirtualFSError(code.EINVAL, srcPath, dstPath);
+      }
+    } finally {
+      if (srcFdIndex !== undefined) this.closeSync(srcFdIndex);
+      if (dstFdIndex !== undefined) this.closeSync(dstFdIndex);
+    }
+    return;
+  }
+
+  createReadStream(path, options) {
+    path = this._getPath(path);
     options = this._getOptions({
       flags: 'r',
       encoding: null,
       fd: null,
-      autoClose: true
+      mode: DEFAULT_FILE_PERM,
+      autoClose: true,
+      end: Infinity
     }, options);
     if (options.start !== undefined) {
-      if (typeof options.start !== 'number') {
-        throw new TypeError('"start" option must be a Number');
-      }
-      if (options.end === undefined) {
-        options.end = Infinity;
-      } else if (typeof options.end !== 'number') {
-        throw new TypeError('"end" option must be a Number');
-      }
       if (options.start > options.end) {
-        throw new RangeError('"start" option must be <= "end" option');
+        throw new RangeError('ERR_VALUE_OUT_OF_RANGE');
       }
     }
-    return new ReadStream(pathS, options, this);
+    return new ReadStream(path, options, this);
   }
 
-  createWriteStream(pathS, options) {
+  createWriteStream(path, options) {
+    path = this._getPath(path);
     options = this._getOptions({
       flags: 'w',
       defaultEncoding: 'utf8',
       fd: null,
+      mode: DEFAULT_FILE_PERM,
       autoClose: true
     }, options);
     if (options.start !== undefined) {
-      if (typeof options.start !== 'number') {
-        throw new TypeError('"start" option must be a Number');
-      }
       if (options.start < 0) {
-        throw new RangeError('"start" must be >= zero');
+        throw new RangeError('ERR_VALUE_OUT_OF_RANGE');
       }
     }
-    return new WriteStream(pathS, options, this);
+    return new WriteStream(path, options, this);
   }
 
-  exists(pathS, callback) {
-    callback = this._maybeCallback(callback);
-    this._callAsync(this.existsSync.bind(this), [pathS], callback, callback);
+  exists(path, callback) {
+    if (!callback) {
+      callback = () => {};
+    }
+    this._callAsync(this.existsSync.bind(this), [path], callback, callback);
     return;
   }
 
-  existsSync(pathS) {
+  existsSync(path) {
+    path = this._getPath(path);
     try {
-      return !!this._navigate(pathS, true).target;
+      return !!this._navigate(path, true).target;
     } catch (e) {
       return false;
     }
   }
 
-  fchmod(fdIndex, mode, callback) {
-    callback = this._maybeCallback(callback);
+  fallocate(fdIndex, offset, len, callback = callbackUp) {
+    this._callAsync(this.fallocateSync.bind(this), [fdIndex, offset, len], callback, callback);
+    return;
+  }
+
+  fallocateSync(fdIndex, offset, len) {
+    if (offset < 0 || len <= 0) {
+      throw new VirtualFSError(code.EINVAL, null, null, 'fallocate');
+    }
+    const fd = this._fdMgr.getFd(fdIndex);
+    if (!fd) {
+      throw new VirtualFSError(code.EBADF, null, null, 'fallocate');
+    }
+    const iNode = fd.getINode();
+    if (!(iNode instanceof File)) {
+      throw new VirtualFSError(code.ENODEV, null, null, 'fallocate');
+    }
+    if (!(fd.getFlags() & (constants.O_WRONLY | constants.O_RDWR))) {
+      throw new VirtualFSError(code.EBADF, null, null, 'fallocate');
+    }
+    const data = iNode.getData();
+    const metadata = iNode.getMetadata();
+    if (offset + len > data.length) {
+      let newData;
+      try {
+        newData = Buffer$1.concat([data, Buffer$1.alloc(offset + len - data.length)]);
+      } catch (e) {
+        if (e instanceof RangeError) {
+          throw new VirtualFSError(code.EFBIG, null, null, 'fallocate');
+        }
+        throw e;
+      }
+      iNode.setData(newData);
+      metadata.size = newData.length;
+    }
+    metadata.ctime = new Date();
+    return;
+  }
+
+  mmap(length, flags, fdIndex, ...args) {
+    let cbIndex = args.findIndex(arg => typeof arg === 'function');
+    const callback = args[cbIndex] || callbackUp;
+    cbIndex = cbIndex >= 0 ? cbIndex : args.length;
+    this._callAsync(this.mmapSync.bind(this), [length, flags, fdIndex, ...args.slice(0, cbIndex)], buffer$$1 => callback(null, buffer$$1), callback);
+    return;
+  }
+
+  mmapSync(length, flags, fdIndex, offset = 0) {
+    if (length < 1 || offset < 0) {
+      throw new VirtualFSError(code.EINVAL, null, null, 'mmap');
+    }
+    const fd = this._fdMgr.getFd(fdIndex);
+    if (!fd) {
+      throw new VirtualFSError(code.EBADF, null, null, 'mmap');
+    }
+    const access = fd.getFlags() & constants.O_ACCMODE;
+    if (access === constants.O_WRONLY) {
+      throw new VirtualFSError(code.EACCES, null, null, 'mmap');
+    }
+    const iNode = fd.getINode();
+    if (!(iNode instanceof File)) {
+      throw new VirtualFSError(code.ENODEV, null, null, 'mmap');
+    }
+    switch (flags) {
+      case constants.MAP_PRIVATE:
+        return Buffer$1.from(iNode.getData().slice(offset, offset + length));
+      case constants.MAP_SHARED:
+        if (access !== constants.O_RDWR) {
+          throw new VirtualFSError(code.EACCES, null, null, 'mmap');
+        }
+        return permaProxy(iNode, '_data').slice(offset, offset + length);
+      default:
+        throw new VirtualFSError(code.EINVAL, null, null, 'mmap');
+    }
+  }
+
+  fchmod(fdIndex, mode, callback = callbackUp) {
     this._callAsync(this.fchmodSync.bind(this), [fdIndex, mode], callback, callback);
     return;
   }
 
   fchmodSync(fdIndex, mode) {
-    if (!this._fdMgr.getFd(fdIndex)) {
-      throw new VirtualFSError(errno.code.EBADF, null, null, 'fchmod');
+    const fd = this._fdMgr.getFd(fdIndex);
+    if (!fd) {
+      throw new VirtualFSError(code.EBADF, null, null, 'fchmod');
     }
+    if (typeof mode !== 'number') {
+      throw new TypeError('mode must be an integer');
+    }
+    const fdMetadata = fd.getINode().getMetadata();
+    if (this._uid !== DEFAULT_ROOT_UID && this._uid !== fdMetadata.uid) {
+      throw new VirtualFSError(code.EPERM, null, null, 'fchmod');
+    }
+    fdMetadata.mode = fdMetadata.mode & constants.S_IMFT | mode;
     return;
   }
 
-  fchown(fdIndex, uid, gid, callback) {
-    callback = this._maybeCallback(callback);
+  fchown(fdIndex, uid, gid, callback = callbackUp) {
     this._callAsync(this.fchmodSync.bind(this), [fdIndex, uid, gid], callback, callback);
     return;
   }
 
   fchownSync(fdIndex, uid, gid) {
-    if (!this._fdMgr.getFd(fdIndex)) {
-      throw new VirtualFSError(errno.code.EBADF, null, null, 'fchown');
+    const fd = this._fdMgr.getFd(fdIndex);
+    if (!fd) {
+      throw new VirtualFSError(code.EBADF, null, null, 'fchown');
+    }
+    const fdMetadata = fd.getINode().getMetadata();
+    if (this._uid !== DEFAULT_ROOT_UID) {
+      // you don't own the file
+      if (fdMetadata.uid !== this._uid) {
+        throw new VirtualFSError(code.EPERM, null, null, 'fchown');
+      }
+      // you cannot give files to others
+      if (this._uid !== uid) {
+        throw new VirtualFSError(code.EPERM, null, null, 'fchown');
+      }
+      // because we don't have user group hierarchies, we allow chowning to any group
+    }
+    if (typeof uid === 'number') {
+      fdMetadata.uid = uid;
+    }
+    if (typeof gid === 'number') {
+      fdMetadata.gid = gid;
     }
     return;
   }
 
-  fdatasync(fdIndex, callback) {
-    callback = this._maybeCallback(callback);
+  fdatasync(fdIndex, callback = callbackUp) {
     this._callAsync(this.fchmodSync.bind(this), [fdIndex], callback, callback);
     return;
   }
 
   fdatasyncSync(fdIndex) {
     if (!this._fdMgr.getFd(fdIndex)) {
-      throw new VirtualFSError(errno.code.EBADF, null, null, 'fdatasync');
+      throw new VirtualFSError(code.EBADF, null, null, 'fdatasync');
     }
     return;
   }
 
-  fstat(fdIndex, callback) {
-    callback = this._maybeCallback(callback);
-    this._callAsync(this.fstatSync.bind(this), [fdIndex], callback, callback);
+  fstat(fdIndex, callback = callbackUp) {
+    this._callAsync(this.fstatSync.bind(this), [fdIndex], stat => callback(null, stat), callback);
     return;
   }
 
   fstatSync(fdIndex) {
     const fd = this._fdMgr.getFd(fdIndex);
     if (!fd) {
-      throw new VirtualFSError(errno.code.EBADF, null, null, 'fstat');
+      throw new VirtualFSError(code.EBADF, null, null, 'fstat');
     }
     return new Stat(_extends({}, fd.getINode().getMetadata()));
   }
 
-  fsync(fdIndex, callback) {
-    callback = this._maybeCallback(callback);
+  fsync(fdIndex, callback = callbackUp) {
     this._callAsync(this.fsyncSync.bind(this), [fdIndex], callback, callback);
     return;
   }
 
   fsyncSync(fdIndex) {
     if (!this._fdMgr.getFd(fdIndex)) {
-      throw new VirtualFSError(errno.code.EBADF, null, null, 'fsync');
+      throw new VirtualFSError(code.EBADF, null, null, 'fsync');
     }
     return;
   }
 
   ftruncate(fdIndex, ...args) {
     let cbIndex = args.findIndex(arg => typeof arg === 'function');
-    const callback = this._maybeCallback(args[cbIndex]);
+    const callback = args[cbIndex] || callbackUp;
     cbIndex = cbIndex >= 0 ? cbIndex : args.length;
     this._callAsync(this.ftruncateSync.bind(this), [fdIndex, ...args.slice(0, cbIndex)], callback, callback);
     return;
   }
 
   ftruncateSync(fdIndex, len = 0) {
+    if (len < 0) {
+      throw new VirtualFSError(code.EINVAL, null, null, 'ftruncate');
+    }
     const fd = this._fdMgr.getFd(fdIndex);
     if (!fd) {
-      throw new VirtualFSError(errno.code.EBADF, null, null, 'ftruncate');
+      throw new VirtualFSError(code.EBADF, null, null, 'ftruncate');
     }
-    const flags = fd.getFlags();
-    if (!(flags & (constants.O_WRONLY | constants.O_RDWR))) {
-      throw new VirtualFSError(errno.code.EINVAL, null, null, 'ftruncate');
+    const iNode = fd.getINode();
+    if (!(iNode instanceof File)) {
+      throw new VirtualFSError(code.EINVAL, null, null, 'ftruncate');
     }
-    fd.truncate(len);
+    if (!(fd.getFlags() & (constants.O_WRONLY | constants.O_RDWR))) {
+      throw new VirtualFSError(code.EINVAL, null, null, 'ftruncate');
+    }
+    const data = iNode.getData();
+    const metadata = iNode.getMetadata();
+    let newData;
+    try {
+      if (len > data.length) {
+        newData = Buffer$1.alloc(len);
+        data.copy(newData, 0, 0, data.length);
+        iNode.setData(newData);
+      } else if (len < data.length) {
+        newData = Buffer$1.allocUnsafe(len);
+        data.copy(newData, 0, 0, len);
+        iNode.setData(newData);
+      } else {
+        newData = data;
+      }
+    } catch (e) {
+      if (e instanceof RangeError) {
+        throw new VirtualFSError(code.EFBIG, null, null, 'ftruncate');
+      }
+      throw e;
+    }
+    const now = new Date();
+    metadata.mtime = now;
+    metadata.ctime = now;
+    metadata.size = newData.length;
+    fd.setPos(Math.min(newData.length, fd.getPos()));
     return;
   }
 
-  futimes(fdIndex, atime, mtime, callback) {
-    callback = this._maybeCallback(callback);
+  futimes(fdIndex, atime, mtime, callback = callbackUp) {
     this._callAsync(this.futimesSync.bind(this), [fdIndex, atime, mtime], callback, callback);
     return;
   }
@@ -1389,20 +1922,24 @@ class VirtualFS {
   futimesSync(fdIndex, atime, mtime) {
     const fd = this._fdMgr.getFd(fdIndex);
     if (!fd) {
-      throw new VirtualFSError(errno.code.EBADF, null, null, 'futimes');
+      throw new VirtualFSError(code.EBADF, null, null, 'futimes');
     }
     const metadata = fd.getINode().getMetadata();
     let newAtime;
+    let newMtime;
     if (typeof atime === 'number') {
       newAtime = new Date(atime * 1000);
+    } else if (typeof atime === 'string') {
+      newAtime = new Date(parseInt(atime) * 1000);
     } else if (atime instanceof Date) {
       newAtime = atime;
     } else {
       throw TypeError('atime and mtime must be dates or unixtime in seconds');
     }
-    let newMtime;
     if (typeof mtime === 'number') {
       newMtime = new Date(mtime * 1000);
+    } else if (typeof mtime === 'string') {
+      newMtime = new Date(parseInt(mtime) * 1000);
     } else if (mtime instanceof Date) {
       newMtime = mtime;
     } else {
@@ -1414,134 +1951,222 @@ class VirtualFS {
     return;
   }
 
-  lchmod(pathS, mode, callback) {
-    callback = this._maybeCallback(callback);
-    this._callAsync(this.lchmodSync.bind(this), [pathS, mode], callback, callback);
+  lchmod(path, mode, callback = callbackUp) {
+    this._callAsync(this.lchmodSync.bind(this), [path, mode], callback, callback);
     return;
   }
 
-  lchmodSync(pathS, mode) {
-    if (!this._navigate(pathS, false).target) {
-      throw new VirtualFSError(errno.code.ENOENT, pathS);
+  lchmodSync(path, mode) {
+    path = this._getPath(path);
+    const target = this._navigate(path, false).target;
+    if (!target) {
+      throw new VirtualFSError(code.ENOENT, path);
+    }
+    if (typeof mode !== 'number') {
+      throw new TypeError('mode must be an integer');
+    }
+    const targetMetadata = target.getMetadata();
+    if (this._uid !== DEFAULT_ROOT_UID && this._uid !== targetMetadata.uid) {
+      throw new VirtualFSError(code.EPERM, null, null, 'lchmod');
+    }
+    targetMetadata.mode = targetMetadata.mode & constants.S_IFMT | mode;
+    return;
+  }
+
+  lchown(path, uid, gid, callback = callbackUp) {
+    this._callAsync(this.lchownSync.bind(this), [path, uid, gid], callback, callback);
+    return;
+  }
+
+  lchownSync(path, uid, gid) {
+    path = this._getPath(path);
+    const target = this._navigate(path, false).target;
+    if (!target) {
+      throw new VirtualFSError(code.ENOENT, path);
+    }
+    const targetMetadata = target.getMetadata();
+    if (this._uid !== DEFAULT_ROOT_UID) {
+      // you don't own the file
+      if (targetMetadata.uid !== this._uid) {
+        throw new VirtualFSError(code.EPERM, null, null, 'lchown');
+      }
+      // you cannot give files to others
+      if (this._uid !== uid) {
+        throw new VirtualFSError(code.EPERM, null, null, 'lchown');
+      }
+      // because we don't have user group hierarchies, we allow chowning to any group
+    }
+    if (typeof uid === 'number') {
+      targetMetadata.uid = uid;
+    }
+    if (typeof gid === 'number') {
+      targetMetadata.gid = gid;
     }
     return;
   }
 
-  lchown(pathS, uid, gid, callback) {
-    callback = this._maybeCallback(callback);
-    this._callAsync(this.lchownSync.bind(this), [pathS, uid, gid], () => callback(null), callback);
+  link(existingPath, newPath, callback = callbackUp) {
+    this._callAsync(this.linkSync.bind(this), [existingPath, newPath], callback, callback);
     return;
   }
 
-  lchownSync(pathS, uid, gid) {
-    if (!this._navigate(pathS, false).target) {
-      throw new VirtualFSError(errno.code.ENOENT, pathS);
-    }
-    return;
-  }
-
-  link(target, pathS, callback) {
-    callback = this._maybeCallback(callback);
-    this._callAsync(this.linkSync.bind(this), [target, pathS], callback, callback);
-    return;
-  }
-
-  linkSync(existingPathS, newPathS) {
+  linkSync(existingPath, newPath) {
+    existingPath = this._getPath(existingPath);
+    newPath = this._getPath(newPath);
     let navigatedExisting;
     let navigatedNew;
-    try {
-      navigatedExisting = this._navigate(existingPathS, false);
-      navigatedNew = this._navigate(newPathS, false);
-    } catch (e) {
-      if (e instanceof VirtualFSError) {
-        throw new VirtualFSError(errno.code.ENOENT, existingPathS, newPathS);
-      }
-    }
+    navigatedExisting = this._navigate(existingPath, false);
+    navigatedNew = this._navigate(newPath, false);
     if (!navigatedExisting.target) {
-      throw new VirtualFSError(errno.code.ENOENT, existingPathS, newPathS);
+      throw new VirtualFSError(code.ENOENT, existingPath, newPath, 'link');
     }
     if (navigatedExisting.target instanceof Directory) {
-      throw new VirtualFSError(errno.code.EPERM, existingPathS, newPathS);
-    }
-    if (!navigatedNew.target && !navigatedNew.name) {
-      throw new VirtualFSError(errno.code.ENOENT, existingPathS, newPathS);
+      throw new VirtualFSError(code.EPERM, existingPath, newPath, 'link');
     }
     if (!navigatedNew.target) {
-      let index = navigatedExisting.dir.getEntryIndex(navigatedExisting.name);
+      if (navigatedNew.dir.getMetadata().nlink < 2) {
+        throw new VirtualFSError(code.ENOENT, existingPath, newPath, 'link');
+      }
+      if (!this._checkPermissions(constants.W_OK, navigatedNew.dir.getMetadata())) {
+        throw new VirtualFSError(code.EACCES, existingPath, newPath, 'link');
+      }
+      const index = navigatedExisting.dir.getEntryIndex(navigatedExisting.name);
       navigatedNew.dir.addEntry(navigatedNew.name, index);
-      this._inodeMgr.linkINode(index);
       navigatedExisting.target.getMetadata().ctime = new Date();
     } else {
-      throw new VirtualFSError(errno.code.EEXIST, existingPathS, newPathS);
+      throw new VirtualFSError(code.EEXIST, existingPath, newPath, 'link');
     }
     return;
   }
 
-  lstat(pathS, callback) {
-    callback = this._maybeCallback(callback);
-    this._callAsync(this.lstatSync.bind(this), [pathS], stat => callback(null, stat), callback);
+  lseek(fdIndex, position, ...args) {
+    let cbIndex = args.findIndex(arg => typeof arg === 'function');
+    const callback = args[cbIndex] || callbackUp;
+    cbIndex = cbIndex >= 0 ? cbIndex : args.length;
+    this._callAsync(this.lseekSync.bind(this), [fdIndex, position, ...args.slice(0, cbIndex)], callback, callback);
     return;
   }
 
-  lstatSync(pathS) {
-    const target = this._navigate(pathS, false).target;
+  lseekSync(fdIndex, position, seekFlags = constants.SEEK_SET) {
+    const fd = this._fdMgr.getFd(fdIndex);
+    if (!fd) {
+      throw new VirtualFSError(code.EBADF, null, null, 'lseek');
+    }
+    if ([constants.SEEK_SET, constants.SEEK_CUR, constants.SEEK_END].indexOf(seekFlags) === -1) {
+      throw new VirtualFSError(code.EINVAL, null, null, 'lseek');
+    }
+    try {
+      fd.setPos(position, seekFlags);
+    } catch (e) {
+      if (e instanceof VirtualFSError) {
+        e.setSyscall('lseek');
+      }
+      throw e;
+    }
+    return;
+  }
+
+  lstat(path, callback = callbackUp) {
+    this._callAsync(this.lstatSync.bind(this), [path], stat => callback(null, stat), callback);
+    return;
+  }
+
+  lstatSync(path) {
+    path = this._getPath(path);
+    const target = this._navigate(path, false).target;
     if (target) {
       return new Stat(_extends({}, target.getMetadata()));
     } else {
-      throw new VirtualFSError(errno.code.ENOENT, pathS);
+      throw new VirtualFSError(code.ENOENT, path);
     }
   }
 
-  mkdir(pathS, ...args) {
+  mkdir(path, ...args) {
     let cbIndex = args.findIndex(arg => typeof arg === 'function');
-    const callback = this._maybeCallback(args[cbIndex]);
+    const callback = args[cbIndex] || callbackUp;
     cbIndex = cbIndex >= 0 ? cbIndex : args.length;
-    this._callAsync(this.mkdirSync.bind(this), [pathS, ...args.slice(0, cbIndex)], callback, callback);
+    this._callAsync(this.mkdirSync.bind(this), [path, ...args.slice(0, cbIndex)], callback, callback);
     return;
   }
 
-  mkdirSync(pathS, mode) {
-    let navigated = this._navigate(pathS, true);
-    if (!navigated.target && !navigated.name) {
-      throw new VirtualFSError(errno.code.ENOENT, pathS);
+  mkdirSync(path, mode = DEFAULT_DIRECTORY_PERM) {
+    path = this._getPath(path);
+    // we expect a non-existent directory
+    path = path.replace(/(.+?)\/+$/, '$1');
+    let navigated = this._navigate(path, true);
+    if (navigated.target) {
+      throw new VirtualFSError(code.EEXIST, path, null, 'mkdir');
     } else if (!navigated.target && navigated.remaining) {
-      throw new VirtualFSError(errno.code.ENOENT, pathS);
+      throw new VirtualFSError(code.ENOENT, path, null, 'mkdir');
     } else if (!navigated.target) {
-      let index = this._inodeMgr.createINode(Directory, { parent: navigated.dir.getEntryIndex('.') });
+      if (navigated.dir.getMetadata().nlink < 2) {
+        throw new VirtualFSError(code.ENOENT, path, null, 'mkdir');
+      }
+      if (!this._checkPermissions(constants.W_OK, navigated.dir.getMetadata())) {
+        throw new VirtualFSError(code.EACCES, path, null, 'mkdir');
+      }
+
+      var _iNodeMgr$createINode3 = this._iNodeMgr.createINode(Directory, {
+        mode: applyUmask(mode, this._umask),
+        uid: this._uid,
+        gid: this._gid,
+        parent: navigated.dir.getEntryIndex('.')
+      }),
+          _iNodeMgr$createINode4 = _slicedToArray(_iNodeMgr$createINode3, 2);
+
+      const index = _iNodeMgr$createINode4[1];
+
       navigated.dir.addEntry(navigated.name, index);
-    } else if (!(navigated.target instanceof Directory)) {
-      throw new VirtualFSError(errno.code.ENOTDIR, pathS);
-    } else {
-      throw new VirtualFSError(errno.code.EEXIST, pathS);
     }
     return;
   }
 
-  mkdirp(pathS, ...args) {
+  mkdirp(path, ...args) {
     let cbIndex = args.findIndex(arg => typeof arg === 'function');
-    const callback = this._maybeCallback(args[cbIndex]);
+    const callback = args[cbIndex] || callbackUp;
     cbIndex = cbIndex >= 0 ? cbIndex : args.length;
-    this._callAsync(this.mkdirpSync.bind(this), [pathS, ...args.slice(0, cbIndex)], callback, callback);
+    this._callAsync(this.mkdirpSync.bind(this), [path, ...args.slice(0, cbIndex)], callback, callback);
     return;
   }
 
-  mkdirpSync(pathS, mode) {
-    let current = null;
-    let navigated = this._navigate(pathS, true);
+  mkdirpSync(path, mode = DEFAULT_DIRECTORY_PERM) {
+    path = this._getPath(path);
+    // we expect a directory
+    path = path.replace(/(.+?)\/+$/, '$1');
+    let iNode;
+    let index;
+    let currentDir;
+    let navigated = this._navigate(path, true);
     while (true) {
-      if (!navigated.target && !navigated.name) {
-        throw new VirtualFSError(errno.code.ENOTDIR, pathS);
-      } else if (!navigated.target) {
-        let index = this._inodeMgr.createINode(Directory, { parent: navigated.dir.getEntryIndex('.') });
+      if (!navigated.target) {
+        if (navigated.dir.getMetadata().nlink < 2) {
+          throw new VirtualFSError(code.ENOENT, path);
+        }
+        if (!this._checkPermissions(constants.W_OK, navigated.dir.getMetadata())) {
+          throw new VirtualFSError(code.EACCES, path);
+        }
+
+        var _iNodeMgr$createINode5 = this._iNodeMgr.createINode(Directory, {
+          mode: applyUmask(mode, this._umask),
+          uid: this._uid,
+          gid: this._gid,
+          parent: navigated.dir.getEntryIndex('.')
+        });
+
+        var _iNodeMgr$createINode6 = _slicedToArray(_iNodeMgr$createINode5, 2);
+
+        iNode = _iNodeMgr$createINode6[0];
+        index = _iNodeMgr$createINode6[1];
+
         navigated.dir.addEntry(navigated.name, index);
         if (navigated.remaining) {
-          current = this._inodeMgr.getINode(index);
-          navigated = this._navigateFrom(current, navigated.remaining, true);
+          currentDir = iNode;
+          navigated = this._navigateFrom(currentDir, navigated.remaining, true);
         } else {
           break;
         }
       } else if (!(navigated.target instanceof Directory)) {
-        throw new VirtualFSError(errno.code.ENOTDIR, pathS);
+        throw new VirtualFSError(code.ENOTDIR, path);
       } else {
         break;
       }
@@ -1551,9 +2176,9 @@ class VirtualFS {
 
   mkdtemp(pathSPrefix, ...args) {
     let cbIndex = args.findIndex(arg => typeof arg === 'function');
-    const callback = this._maybeCallback(args[cbIndex]);
+    const callback = args[cbIndex] || callbackUp;
     cbIndex = cbIndex >= 0 ? cbIndex : args.length;
-    this._callAsync(this.realpathSync.bind(this), [pathSPrefix, ...args.slice(0, cbIndex)], pathS => callback(null, pathS), callback);
+    this._callAsync(this.mkdtempSync.bind(this), [pathSPrefix, ...args.slice(0, cbIndex)], pathS => callback(null, pathS), callback);
     return;
   }
 
@@ -1572,30 +2197,97 @@ class VirtualFS {
       try {
         this.mkdirSync(pathS);
         if (options.encoding === 'buffer') {
-          return Buffer.from(pathS);
+          return Buffer$1.from(pathS);
         } else {
-          return Buffer.from(pathS).toString(options.encoding);
+          return Buffer$1.from(pathS).toString(options.encoding);
         }
       } catch (e) {
-        if (e.code !== errno.code.EEXIST) {
+        if (e.code !== code.EEXIST) {
           throw e;
         }
       }
     }
   }
 
-  open(pathS, flags, ...args) {
+  mknod(path, type, major, minor, ...args) {
     let cbIndex = args.findIndex(arg => typeof arg === 'function');
-    const callback = this._maybeCallback(args[cbIndex]);
+    const callback = args[cbIndex] || callbackUp;
     cbIndex = cbIndex >= 0 ? cbIndex : args.length;
-    this._callAsync(this.openSync.bind(this), [pathS, flags, ...args.slice(0, cbIndex)], fdIndex => callback(null, fdIndex), callback);
+    this._callAsync(this.mknodSync.bind(this), [path, type, major, minor, ...args.slice(0, cbIndex)], callback, callback);
     return;
   }
 
-  openSync(pathS, flags, mode) {
+  mknodSync(path, type, major, minor, mode = DEFAULT_FILE_PERM) {
+    path = this._getPath(path);
+    const navigated = this._navigate(path, false);
+    if (navigated.target) {
+      throw new VirtualFSError(code.EEXIST, path, null, 'mknod');
+    }
+    if (navigated.dir.getMetadata().nlink < 2) {
+      throw new VirtualFSError(code.ENOENT, path, null, 'mknod');
+    }
+    if (!this._checkPermissions(constants.W_OK, navigated.dir.getMetadata())) {
+      throw new VirtualFSError(code.EACCES, path, null, 'mknod');
+    }
+    let index;
+    switch (type) {
+      case constants.S_IFREG:
+        var _iNodeMgr$createINode7 = this._iNodeMgr.createINode(File, {
+          mode: applyUmask(mode, this._umask),
+          uid: this._uid,
+          gid: this._gid
+        });
+
+        var _iNodeMgr$createINode8 = _slicedToArray(_iNodeMgr$createINode7, 2);
+
+        index = _iNodeMgr$createINode8[1];
+
+        break;
+      case constants.S_IFCHR:
+        if (typeof major !== 'number' || typeof minor !== 'number') {
+          throw TypeError('major and minor must set as numbers when creating device nodes');
+        }
+        if (major > MAJOR_MAX || minor > MINOR_MAX || minor < MAJOR_MIN || minor < MINOR_MIN) {
+          throw new VirtualFSError(code.EINVAL, path, null, 'mknod');
+        }
+
+        var _iNodeMgr$createINode9 = this._iNodeMgr.createINode(CharacterDev, {
+          mode: applyUmask(mode, this._umask),
+          uid: this._uid,
+          gid: this._gid,
+          rdev: mkDev(major, minor)
+        });
+
+        var _iNodeMgr$createINode10 = _slicedToArray(_iNodeMgr$createINode9, 2);
+
+        index = _iNodeMgr$createINode10[1];
+
+        break;
+      default:
+        throw new VirtualFSError(code.EPERM, path, null, 'mknod');
+    }
+    navigated.dir.addEntry(navigated.name, index);
+    return;
+  }
+
+  open(path, flags, ...args) {
+    let cbIndex = args.findIndex(arg => typeof arg === 'function');
+    const callback = args[cbIndex] || callbackUp;
+    cbIndex = cbIndex >= 0 ? cbIndex : args.length;
+    this._callAsync(this.openSync.bind(this), [path, flags, ...args.slice(0, cbIndex)], fdIndex => callback(null, fdIndex), callback);
+    return;
+  }
+
+  openSync(path, flags, mode = DEFAULT_FILE_PERM) {
+    return this._openSync(path, flags, mode)[1];
+  }
+
+  _openSync(path, flags, mode = DEFAULT_FILE_PERM) {
+    path = this._getPath(path);
     if (typeof flags === 'string') {
       switch (flags) {
         case 'r':
+        case 'rs':
           flags = constants.O_RDONLY;
           break;
         case 'r+':
@@ -1633,54 +2325,88 @@ class VirtualFS {
     if (typeof flags !== 'number') {
       throw new TypeError('Unknown file open flag: ' + flags);
     }
-    let navigated = this._navigate(pathS, false);
+    let navigated = this._navigate(path, false);
     if (navigated.target instanceof Symlink) {
       // cannot be symlink if O_NOFOLLOW
       if (flags & constants.O_NOFOLLOW) {
-        throw new VirtualFSError(errno.code.ELOOP, pathS);
+        throw new VirtualFSError(code.ELOOP, path, null, 'open');
       }
-      // cannot create exclusively if symlink
-      if (flags & constants.O_CREAT && flags & constants.O_EXCL) {
-        throw new VirtualFSError(errno.code.EEXIST, pathS);
-      }
-      navigated = this._navigateFrom(navigated.dir, navigated.name + navigated.remaining, true);
+      navigated = this._navigateFrom(navigated.dir, navigated.name + navigated.remaining, true, undefined, undefined, path);
     }
     let target = navigated.target;
     // cannot be missing unless O_CREAT
     if (!target) {
       // O_CREAT only applies if there's a left over name without any remaining path
-      if (navigated.name && !navigated.remaining && flags & constants.O_CREAT) {
-        // always creates a regular file
-        const index = this._inodeMgr.createINode(File, { data: Buffer.alloc(0) });
+      if (!navigated.remaining && flags & constants.O_CREAT) {
+        // cannot create if the current directory has been unlinked from its parent directory
+        if (navigated.dir.getMetadata().nlink < 2) {
+          throw new VirtualFSError(code.ENOENT, path, null, 'open');
+        }
+        if (!this._checkPermissions(constants.W_OK, navigated.dir.getMetadata())) {
+          throw new VirtualFSError(code.EACCES, path, null, 'open');
+        }
+        let index;
+
+        var _iNodeMgr$createINode11 = this._iNodeMgr.createINode(File, {
+          mode: applyUmask(mode, this._umask),
+          uid: this._uid,
+          gid: this._gid
+        });
+
+        var _iNodeMgr$createINode12 = _slicedToArray(_iNodeMgr$createINode11, 2);
+
+        target = _iNodeMgr$createINode12[0];
+        index = _iNodeMgr$createINode12[1];
+
         navigated.dir.addEntry(navigated.name, index);
-        target = this._inodeMgr.getINode(index);
       } else {
-        throw new VirtualFSError(errno.code.ENOENT, pathS);
+        throw new VirtualFSError(code.ENOENT, path, null, 'open');
       }
     } else {
       // target already exists cannot be created exclusively
       if (flags & constants.O_CREAT && flags & constants.O_EXCL) {
-        throw new VirtualFSError(errno.code.EEXIST, pathS);
+        throw new VirtualFSError(code.EEXIST, path, null, 'open');
       }
       // cannot be directory if write capabilities are requested
       if (target instanceof Directory && flags & (constants.O_WRONLY | flags & constants.O_RDWR)) {
-        throw new VirtualFSError(errno.code.EISDIR, pathS);
+        throw new VirtualFSError(code.EISDIR, path, null, 'open');
       }
       // must be directory if O_DIRECTORY
       if (flags & constants.O_DIRECTORY && !(target instanceof Directory)) {
-        throw new VirtualFSError(errno.code.ENOTDIR, pathS);
+        throw new VirtualFSError(code.ENOTDIR, path, null, 'open');
       }
       // must truncate a file if O_TRUNC
       if (flags & constants.O_TRUNC && target instanceof File && flags & (constants.O_WRONLY | constants.O_RDWR)) {
-        target.setData(Buffer.alloc(0));
+        target.setData(Buffer$1.alloc(0));
+      }
+      // convert file descriptor access flags into bitwise permission flags
+      let access;
+      if (flags & constants.O_RDWR) {
+        access = constants.R_OK | constants.W_OK;
+      } else if (flags & constants.O_WRONLY) {
+        access = constants.W_OK;
+      } else {
+        access = constants.R_OK;
+      }
+      if (!this._checkPermissions(access, target.getMetadata())) {
+        throw new VirtualFSError(code.EACCES, path, null, 'open');
       }
     }
-    return this._fdMgr.createFd(target, flags).index;
+    try {
+      let fd = this._fdMgr.createFd(target, flags);
+      return fd;
+    } catch (e) {
+      if (e instanceof VirtualFSError) {
+        e.setPaths(path);
+        e.setSyscall('open');
+      }
+      throw e;
+    }
   }
 
   read(fdIndex, buffer$$1, ...args) {
     let cbIndex = args.findIndex(arg => typeof arg === 'function');
-    const callback = this._maybeCallback(args[cbIndex]);
+    const callback = args[cbIndex] || callbackUp;
     cbIndex = cbIndex >= 0 ? cbIndex : args.length;
     this._callAsync(this.readSync.bind(this), [fdIndex, buffer$$1, ...args.slice(0, cbIndex)], bytesRead => callback(null, bytesRead, buffer$$1), callback);
     return;
@@ -1689,17 +2415,17 @@ class VirtualFS {
   readSync(fdIndex, buffer$$1, offset = 0, length = 0, position = null) {
     const fd = this._fdMgr.getFd(fdIndex);
     if (!fd) {
-      throw new VirtualFSError(errno.code.EBADF, null, null, 'read');
+      throw new VirtualFSError(code.EBADF, null, null, 'read');
     }
     if (typeof position === 'number' && position < 0) {
-      throw new VirtualFSError(errno.code.EINVAL, null, null, 'read');
+      throw new VirtualFSError(code.EINVAL, null, null, 'read');
     }
     if (fd.getINode().getMetadata().isDirectory()) {
-      throw new VirtualFSError(errno.code.EISDIR, null, null, 'read');
+      throw new VirtualFSError(code.EISDIR, null, null, 'read');
     }
     const flags = fd.getFlags();
-    if (flags !== constants.O_RDONLY && !(flags & constants.O_RDWR)) {
-      throw new VirtualFSError(errno.code.EBADF, null, null, 'read');
+    if (flags & constants.O_WRONLY) {
+      throw new VirtualFSError(code.EBADF, null, null, 'read');
     }
     if (offset < 0 || offset > buffer$$1.length) {
       throw new RangeError('Offset is out of bounds');
@@ -1707,39 +2433,54 @@ class VirtualFS {
     if (length < 0 || length > buffer$$1.length) {
       throw new RangeError('Length extends beyond buffer');
     }
-    buffer$$1 = buffer$$1.slice(offset, offset + length);
-    return fd.read(buffer$$1, position);
+    buffer$$1 = this._getBuffer(buffer$$1).slice(offset, offset + length);
+    let bytesRead;
+    try {
+      bytesRead = fd.read(buffer$$1, position);
+    } catch (e) {
+      if (e instanceof VirtualFSError) {
+        e.syscall = 'read';
+      }
+      throw e;
+    }
+    return bytesRead;
   }
 
-  readdir(pathS, ...args) {
+  readdir(path, ...args) {
     let cbIndex = args.findIndex(arg => typeof arg === 'function');
-    const callback = this._maybeCallback(args[cbIndex]);
+    const callback = args[cbIndex] || callbackUp;
     cbIndex = cbIndex >= 0 ? cbIndex : args.length;
-    this._callAsync(this.readdirSync.bind(this), [pathS, ...args.slice(0, cbIndex)], files => callback(null, files), callback);
+    this._callAsync(this.readdirSync.bind(this), [path, ...args.slice(0, cbIndex)], files => callback(null, files), callback);
     return;
   }
 
-  readdirSync(pathS, options) {
+  readdirSync(path, options) {
+    path = this._getPath(path);
     options = this._getOptions({ encoding: 'utf8' }, options);
-    let navigated = this._navigate(pathS, true);
+    let navigated = this._navigate(path, true);
     if (!navigated.target) {
-      throw new VirtualFSError(errno.code.ENOENT, pathS);
+      throw new VirtualFSError(code.ENOENT, path, null, 'readdir');
     }
-    if (navigated.target instanceof Symlink) {
-      throw new VirtualFSError(errno.code.ENOTDIR, pathS);
+    if (!(navigated.target instanceof Directory)) {
+      throw new VirtualFSError(code.ENOTDIR, path, null, 'readdir');
     }
-    return _Array$from(navigated.target.getEntries().keys()).filter(name => name !== '.' && name !== '..').map(name => {
+    if (!this._checkPermissions(constants.R_OK, navigated.target.getMetadata())) {
+      throw new VirtualFSError(code.EACCES, path, null, 'readdir');
+    }
+    return [...navigated.target.getEntries()].filter(([name, _]) => name !== '.' && name !== '..').map(([name, _]) => {
+      // $FlowFixMe: options exists
       if (options.encoding === 'buffer') {
-        return Buffer.from(name);
+        return Buffer$1.from(name);
       } else {
-        return Buffer.from(name).toString(options.encoding);
+        // $FlowFixMe: options exists and is not a string
+        return Buffer$1.from(name).toString(options.encoding);
       }
     });
   }
 
   readFile(file, ...args) {
     let cbIndex = args.findIndex(arg => typeof arg === 'function');
-    const callback = this._maybeCallback(args[cbIndex]);
+    const callback = args[cbIndex] || callbackUp;
     cbIndex = cbIndex >= 0 ? cbIndex : args.length;
     this._callAsync(this.readFileSync.bind(this), [file, ...args.slice(0, cbIndex)], data => callback(null, data), callback);
     return;
@@ -1748,263 +2489,320 @@ class VirtualFS {
   readFileSync(file, options) {
     options = this._getOptions({ encoding: null, flag: 'r' }, options);
     let fdIndex;
-    let fd;
-    if (typeof file === 'string') {
-      fdIndex = this.openSync(file, options.flag);
-      fd = this._fdMgr.getFd(fdIndex);
-    } else if (typeof file === 'number') {
-      fd = this._fdMgr.getFd(file);
-    } else {
-      throw TypeError('file must be a string or number');
+    try {
+      const buffer$$1 = Buffer$1.allocUnsafe(4096);
+      let totalBuffer = Buffer$1.alloc(0);
+      let bytesRead = null;
+      if (typeof file === 'number') {
+        while (bytesRead !== 0) {
+          bytesRead = this.readSync(file, buffer$$1, 0, buffer$$1.length);
+          totalBuffer = Buffer$1.concat([totalBuffer, buffer$$1.slice(0, bytesRead)]);
+        }
+      } else {
+        fdIndex = this.openSync(file, options.flag);
+        while (bytesRead !== 0) {
+          bytesRead = this.readSync(fdIndex, buffer$$1, 0, buffer$$1.length);
+          totalBuffer = Buffer$1.concat([totalBuffer, buffer$$1.slice(0, bytesRead)]);
+        }
+      }
+      return options.encoding ? totalBuffer.toString(options.encoding) : totalBuffer;
+    } finally {
+      if (fdIndex !== undefined) this.closeSync(fdIndex);
     }
-    if (!fd) {
-      throw new VirtualFSError(errno.code.EBADF, null, null, 'readFile');
-    }
-    if (fd.getINode().getMetadata().isDirectory()) {
-      throw new VirtualFSError(errno.code.EISDIR, null, null, 'readFile');
-    }
-    // as an in-memory filesystem, we can cheat here and get the data directly
-    // but doing so, results in circumventing the file descriptor semantics
-    // so instead we cheat less by getting the full length minus the fd position
-    const bufferLength = fd.getINode().getData().length;
-    const fdPosition = fd.getPos();
-    const buffer$$1 = Buffer.allocUnsafe(bufferLength - fdPosition);
-    fd.read(buffer$$1);
-    if (fdIndex !== undefined) this.closeSync(fdIndex);
-    return options.encoding ? buffer$$1.toString(options.encoding) : buffer$$1;
   }
 
-  readlink(pathS, ...args) {
+  readlink(path, ...args) {
     let cbIndex = args.findIndex(arg => typeof arg === 'function');
-    const callback = this._maybeCallback(args[cbIndex]);
+    const callback = args[cbIndex] || callbackUp;
     cbIndex = cbIndex >= 0 ? cbIndex : args.length;
-    this._callAsync(this.readlinkSync.bind(this), [pathS, ...args.slice(0, cbIndex)], linkString => callback(null, linkString), callback);
+    this._callAsync(this.readlinkSync.bind(this), [path, ...args.slice(0, cbIndex)], linkString => callback(null, linkString), callback);
     return;
   }
 
-  readlinkSync(pathS, options) {
+  readlinkSync(path, options) {
+    path = this._getPath(path);
     options = this._getOptions({ encoding: 'utf8' }, options);
-    let target = this._navigate(pathS, false).target;
+    let target = this._navigate(path, false).target;
     if (!target) {
-      throw new VirtualFSError(errno.code.ENOENT, pathS);
+      throw new VirtualFSError(code.ENOENT, path);
     }
     if (!(target instanceof Symlink)) {
-      throw new VirtualFSError(errno.code.EINVAL, pathS);
+      throw new VirtualFSError(code.EINVAL, path);
     }
     const link = target.getLink();
     if (options.encoding === 'buffer') {
-      return Buffer.from(link);
+      return Buffer$1.from(link);
     } else {
-      return Buffer.from(link).toString(options.encoding);
+      return Buffer$1.from(link).toString(options.encoding);
     }
   }
 
-  realpath(pathS, ...args) {
+  realpath(path, ...args) {
     let cbIndex = args.findIndex(arg => typeof arg === 'function');
-    const callback = this._maybeCallback(args[cbIndex]);
+    const callback = args[cbIndex] || callbackUp;
     cbIndex = cbIndex >= 0 ? cbIndex : args.length;
-    this._callAsync(this.realpathSync.bind(this), [pathS, ...args.slice(0, cbIndex)], pathS => callback(null, pathS), callback);
+    this._callAsync(this.realpathSync.bind(this), [path, ...args.slice(0, cbIndex)], path => callback(null, path), callback);
     return;
   }
 
-  realpathSync(pathS, options) {
+  realpathSync(path, options) {
+    path = this._getPath(path);
     options = this._getOptions({ encoding: 'utf8' }, options);
-    const navigated = this._navigate(pathS, true);
+    const navigated = this._navigate(path, true);
     if (!navigated.target) {
-      throw new VirtualFSError(errno.code.ENOENT, pathS);
+      throw new VirtualFSError(code.ENOENT, path);
     }
     if (options.encoding === 'buffer') {
-      return Buffer.from(navigated.path);
+      return Buffer$1.from('/' + navigated.pathStack.join('/'));
     } else {
-      return Buffer.from(navigated.path).toString(options.encoding);
+      return Buffer$1.from('/' + navigated.pathStack.join('/')).toString(options.encoding);
     }
   }
 
-  rename(oldPathS, newPathS, callback) {
-    callback = this._maybeCallback(callback);
-    this._callAsync(this.renameSync.bind(this), [oldPathS, newPathS], callback, callback);
+  rename(oldPath, newPath, callback = callbackUp) {
+    this._callAsync(this.renameSync.bind(this), [oldPath, newPath], callback, callback);
     return;
   }
 
-  renameSync(oldPathS, newPathS) {
-    let navigatedSource = this._navigate(oldPathS, false);
-    let navigatedTarget = this._navigate(newPathS, false);
-    // neither oldPathS nor newPathS can point to root
-    if (navigatedSource.target === this._root || navigatedTarget.target === this._root) {
-      throw new VirtualFSError(errno.code.EBUSY, oldPathS, newPathS);
+  renameSync(oldPath, newPath) {
+    oldPath = this._getPath(oldPath);
+    newPath = this._getPath(newPath);
+    const navigatedSource = this._navigate(oldPath, false);
+    const navigatedTarget = this._navigate(newPath, false);
+    if (!navigatedSource.target) {
+      throw new VirtualFSError(code.ENOENT, oldPath, newPath, 'rename');
     }
-    // source must resolve to something
-    // both source and target must resolve intermediate path segments
-    if (!navigatedSource.target || !navigatedTarget.target && !navigatedTarget.name) {
-      throw new VirtualFSError(errno.code.ENOENT, oldPathS, newPathS);
+    if (navigatedSource.target instanceof Directory) {
+      // if oldPath is a directory, target must be a directory (if it exists)
+      if (navigatedTarget.target && !(navigatedTarget.target instanceof Directory)) {
+        throw new VirtualFSError(code.ENOTDIR, oldPath, newPath, 'rename');
+      }
+      // neither oldPath nor newPath can point to root
+      if (navigatedSource.target === this._root || navigatedTarget.target === this._root) {
+        throw new VirtualFSError(code.EBUSY, oldPath, newPath, 'rename');
+      }
+      // if the target directory contains elements this cannot be done
+      // this can be done without read permissions
+      if (navigatedTarget.target && [...navigatedTarget.target.getEntries()].length - 2) {
+        throw new VirtualFSError(code.ENOTEMPTY, oldPath, newPath, 'rename');
+      }
+      // if any of the paths used .. or ., then `dir` is not the parent directory
+      if (navigatedSource.name === '.' || navigatedSource.name === '..' || navigatedTarget.name === '.' || navigatedTarget.name === '..') {
+        throw new VirtualFSError(code.EBUSY, oldPath, newPath, 'rename');
+      }
+      // cannot rename a source prefix of target
+      if (navigatedSource.pathStack.length < navigatedTarget.pathStack.length) {
+        let prefixOf = true;
+        for (let i = 0; i < navigatedSource.pathStack.length; ++i) {
+          if (navigatedSource.pathStack[i] !== navigatedTarget.pathStack[i]) {
+            prefixOf = false;
+            break;
+          }
+        }
+        if (prefixOf) {
+          throw new VirtualFSError(code.EINVAL, oldPath, newPath, 'rename');
+        }
+      }
+    } else {
+      // if oldPath is not a directory, then newPath cannot be an existing directory
+      if (navigatedTarget.target && navigatedTarget.target instanceof Directory) {
+        throw new VirtualFSError(code.EISDIR, oldPath, newPath, 'rename');
+      }
     }
-    // if source is file, target must not be a directory
-    if (navigatedSource.target instanceof File && navigatedTarget.target instanceof Directory) {
-      throw new VirtualFSError(errno.code.EISDIR, oldPathS, newPathS);
-    }
-    // if source is a directory, target must be a directory (if it exists)
-    if (navigatedSource.target instanceof Directory && navigatedTarget.target && !(navigatedTarget.target instanceof Directory)) {
-      throw new VirtualFSError(errno.code.ENOTDIR, oldPathS, newPathS);
-    }
-    // if the target directory contains elements this cannot be done
-    if (navigatedTarget.target instanceof Directory && _Array$from(navigatedTarget.target.getEntries().keys()).length - 2) {
-      throw new VirtualFSError(errno.code.ENOTEMPTY, oldPathS, newPathS);
+    // both the navigatedSource.dir and navigatedTarget.dir must support write permissions
+    if (!this._checkPermissions(constants.W_OK, navigatedSource.dir.getMetadata()) || !this._checkPermissions(constants.W_OK, navigatedTarget.dir.getMetadata())) {
+      throw new VirtualFSError(code.EACCES, oldPath, newPath, 'rename');
     }
     // if they are in the same directory, it is simple rename
     if (navigatedSource.dir === navigatedTarget.dir) {
       navigatedSource.dir.renameEntry(navigatedSource.name, navigatedTarget.name);
       return;
     }
-    navigatedSource.target.getMetadata().ctime = new Date();
+    const index = navigatedSource.dir.getEntryIndex(navigatedSource.name);
     if (navigatedTarget.target) {
-      let index = navigatedSource.dir.getEntryIndex(navigatedSource.name);
       navigatedTarget.target.getMetadata().ctime = new Date();
       navigatedTarget.dir.deleteEntry(navigatedTarget.name);
       navigatedTarget.dir.addEntry(navigatedTarget.name, index);
-      navigatedSource.dir.deleteEntry(index);
-      return;
     } else {
-      let index = navigatedSource.dir.getEntryIndex(navigatedSource.name);
+      if (navigatedTarget.dir.getMetadata().nlink < 2) {
+        throw new VirtualFSError(code.ENOENT, oldPath, newPath, 'rename');
+      }
       navigatedTarget.dir.addEntry(navigatedTarget.name, index);
-      navigatedSource.dir.deleteEntry(navigatedSource.name);
-      return;
     }
-  }
-
-  rmdir(pathS, callback) {
-    callback = this._maybeCallback(callback);
-    this._callAsync(this.rmdirSync.bind(this), [pathS], callback, callback);
+    navigatedSource.target.getMetadata().ctime = new Date();
+    navigatedSource.dir.deleteEntry(navigatedSource.name);
     return;
   }
 
-  rmdirSync(pathS) {
-    let navigated = this._navigate(pathS, false);
-    if (!navigated.target) {
-      throw new VirtualFSError(errno.code.ENOENT, pathS);
-    }
-    if (!(navigated.target instanceof Directory)) {
-      throw new VirtualFSError(errno.code.ENOTDIR, pathS);
-    }
+  rmdir(path, callback = callbackUp) {
+    this._callAsync(this.rmdirSync.bind(this), [path], callback, callback);
+    return;
+  }
+
+  rmdirSync(path) {
+    path = this._getPath(path);
+    // if the path has trailing slashes, navigation would traverse into it
+    // we must trim off these trailing slashes to allow these directories to be removed
+    path = path.replace(/(.+?)\/+$/, '$1');
+    let navigated = this._navigate(path, false);
     // this is for if the path resolved to root
     if (!navigated.name) {
-      throw new VirtualFSError(errno.code.EBUSY, pathS);
+      throw new VirtualFSError(code.EBUSY, path, null, 'rmdir');
     }
-    // if this directory has subdirectory or files, then we cannot delete
-    if (_Array$from(navigated.target.getEntries().keys()).length - 2) {
-      throw new VirtualFSError(errno.code.ENOTEMPTY, pathS);
+    // on linux, when .. is used, the parent directory becomes unknown
+    // in that case, they return with ENOTEMPTY
+    // but the directory may in fact be empty
+    // for this edge case, we instead use EINVAL
+    if (navigated.name === '.' || navigated.name === '..') {
+      throw new VirtualFSError(code.EINVAL, path, null, 'rmdir');
+    }
+    if (!navigated.target) {
+      throw new VirtualFSError(code.ENOENT, path, null, 'rmdir');
+    }
+    if (!(navigated.target instanceof Directory)) {
+      throw new VirtualFSError(code.ENOTDIR, path, null, 'rmdir');
+    }
+    if ([...navigated.target.getEntries()].length - 2) {
+      throw new VirtualFSError(code.ENOTEMPTY, path, null, 'rmdir');
+    }
+    if (!this._checkPermissions(constants.W_OK, navigated.dir.getMetadata())) {
+      throw new VirtualFSError(code.EACCES, path, null, 'rmdir');
     }
     navigated.dir.deleteEntry(navigated.name);
     return;
   }
 
-  stat(pathS, callback) {
-    callback = this._maybeCallback(callback);
-    this._callAsync(this.statSync.bind(this), [pathS], stat => callback(null, stat), callback);
+  stat(path, callback = callbackUp) {
+    this._callAsync(this.statSync.bind(this), [path], stat => callback(null, stat), callback);
     return;
   }
 
-  statSync(pathS) {
-    const target = this._navigate(pathS, true).target;
+  statSync(path) {
+    path = this._getPath(path);
+    const target = this._navigate(path, true).target;
     if (target) {
       return new Stat(_extends({}, target.getMetadata()));
     } else {
-      throw new VirtualFSError(errno.code.ENOENT, pathS);
+      throw new VirtualFSError(code.ENOENT, path);
     }
   }
 
-  symlink(target, pathS, ...args) {
+  symlink(dstPath, srcPath, ...args) {
     let cbIndex = args.findIndex(arg => typeof arg === 'function');
-    const callback = this._maybeCallback(args[cbIndex]);
+    const callback = args[cbIndex] || callbackUp;
     cbIndex = cbIndex >= 0 ? cbIndex : args.length;
-    this._callAsync(this.symlinkSync.bind(this), [target, pathS, ...args.slice(0, cbIndex)], callback, callback);
+    this._callAsync(this.symlinkSync.bind(this), [dstPath, srcPath, ...args.slice(0, cbIndex)], callback, callback);
     return;
   }
 
-  symlinkSync(target, pathS, type = 'file') {
-    if (!target) {
-      throw new VirtualFSError(errno.code.ENOENT, pathS, target);
+  symlinkSync(dstPath, srcPath, type = 'file') {
+    dstPath = this._getPath(dstPath);
+    srcPath = this._getPath(srcPath);
+    if (!dstPath) {
+      throw new VirtualFSError(code.ENOENT, srcPath, dstPath, 'symlink');
     }
-    let navigated = this._navigate(pathS, false);
-    if (!navigated.target && !navigated.name) {
-      throw new VirtualFSError(errno.code.ENOENT, pathS, target);
-    } else if (!navigated.target) {
-      let index = this._inodeMgr.createINode(Symlink, { link: target });
+    let navigated = this._navigate(srcPath, false);
+    if (!navigated.target) {
+      if (navigated.dir.getMetadata().nlink < 2) {
+        throw new VirtualFSError(code.ENOENT, srcPath, dstPath, 'symlink');
+      }
+      if (!this._checkPermissions(constants.W_OK, navigated.dir.getMetadata())) {
+        throw new VirtualFSError(code.EACCES, srcPath, dstPath, 'symlink');
+      }
+
+      var _iNodeMgr$createINode13 = this._iNodeMgr.createINode(Symlink, {
+        mode: DEFAULT_SYMLINK_PERM,
+        uid: this._uid,
+        gid: this._gid,
+        link: dstPath
+      }),
+          _iNodeMgr$createINode14 = _slicedToArray(_iNodeMgr$createINode13, 2);
+
+      const index = _iNodeMgr$createINode14[1];
+
       navigated.dir.addEntry(navigated.name, index);
       return;
     } else {
-      throw new VirtualFSError(errno.code.EEXIST, pathS, target);
+      throw new VirtualFSError(code.EEXIST, srcPath, dstPath, 'symlink');
     }
   }
 
   truncate(file, ...args) {
     let cbIndex = args.findIndex(arg => typeof arg === 'function');
-    const callback = this._maybeCallback(args[cbIndex]);
+    const callback = args[cbIndex] || callbackUp;
     cbIndex = cbIndex >= 0 ? cbIndex : args.length;
     this._callAsync(this.truncateSync.bind(this), [file, ...args.slice(0, cbIndex)], callback, callback);
     return;
   }
 
   truncateSync(file, len = 0) {
-    if (typeof file === 'string') {
-      const fdIndex = this.openSync(file, 'r+');
-      this.ftruncateSync(fdIndex, len);
-      this.closeSync(fdIndex);
-    } else if (typeof file === 'number') {
+    if (len < 0) {
+      throw new VirtualFSError(code.EINVAL, null, null, 'ftruncate');
+    }
+    if (typeof file === 'number') {
       this.ftruncateSync(file, len);
     } else {
-      throw TypeError('file must be a string or number');
+      file = this._getPath(file);
+      let fdIndex;
+      try {
+        fdIndex = this.openSync(file, constants.O_WRONLY);
+        this.ftruncateSync(fdIndex, len);
+      } finally {
+        if (fdIndex !== undefined) this.closeSync(fdIndex);
+      }
     }
     return;
   }
 
-  unlink(pathS, callback) {
-    callback = this._maybeCallback(callback);
-    this._callAsync(this.unlinkSync.bind(this), [pathS], callback, callback);
+  unlink(path, callback = callbackUp) {
+    this._callAsync(this.unlinkSync.bind(this), [path], callback, callback);
     return;
   }
 
-  unlinkSync(pathS) {
-    let navigated = this._navigate(pathS, false);
+  unlinkSync(path) {
+    path = this._getPath(path);
+    let navigated = this._navigate(path, false);
     if (!navigated.target) {
-      throw new VirtualFSError(errno.code.ENOENT, pathS);
+      throw new VirtualFSError(code.ENOENT, path);
+    }
+    if (!this._checkPermissions(constants.W_OK, navigated.dir.getMetadata())) {
+      throw new VirtualFSError(code.EACCES, path);
     }
     if (navigated.target instanceof Directory) {
-      throw new VirtualFSError(errno.code.EISDIR, pathS);
+      throw new VirtualFSError(code.EISDIR, path);
     }
     navigated.target.getMetadata().ctime = new Date();
     navigated.dir.deleteEntry(navigated.name);
     return;
   }
 
-  utimes(pathS, atime, mtime, callback) {
-    callback = this._maybeCallback(callback);
-    this._callAsync(this.utimesSync.bind(this), [pathS, atime, mtime], callback, callback);
+  utimes(path, atime, mtime, callback = callbackUp) {
+    this._callAsync(this.utimesSync.bind(this), [path, atime, mtime], callback, callback);
     return;
   }
 
-  utimesSync(pathS, atime, mtime) {
-    const target = this._navigate(pathS, true).target;
+  utimesSync(path, atime, mtime) {
+    path = this._getPath(path);
+    const target = this._navigate(path, true).target;
     if (!target) {
-      throw new VirtualFSError(errno.code.ENOENT, pathS);
+      throw new VirtualFSError(code.ENOENT, path, null, 'utimes');
     }
     const metadata = target.getMetadata();
     let newAtime;
-    if (typeof atime === 'string') {
-      atime = parseInt(atime);
-    }
-    if (typeof mtime === 'string') {
-      mtime = parseInt(mtime);
-    }
+    let newMtime;
     if (typeof atime === 'number') {
       newAtime = new Date(atime * 1000);
+    } else if (typeof atime === 'string') {
+      newAtime = new Date(parseInt(atime) * 1000);
     } else if (atime instanceof Date) {
       newAtime = atime;
     } else {
       throw TypeError('atime and mtime must be dates or unixtime in seconds');
     }
-    let newMtime;
     if (typeof mtime === 'number') {
       newMtime = new Date(mtime * 1000);
+    } else if (typeof mtime === 'string') {
+      newMtime = new Date(parseInt(mtime) * 1000);
     } else if (mtime instanceof Date) {
       newMtime = mtime;
     } else {
@@ -2018,7 +2816,7 @@ class VirtualFS {
 
   write(fdIndex, data, ...args) {
     let cbIndex = args.findIndex(arg => typeof arg === 'function');
-    const callback = this._maybeCallback(args[cbIndex]);
+    const callback = args[cbIndex] || callbackUp;
     cbIndex = cbIndex >= 0 ? cbIndex : args.length;
     this._callAsync(this.writeSync.bind(this), [fdIndex, data, ...args.slice(0, cbIndex)], bytesWritten => callback(null, bytesWritten, data), callback);
     return;
@@ -2027,33 +2825,39 @@ class VirtualFS {
   writeSync(fdIndex, data, offsetOrPos, lengthOrEncoding, position = null) {
     const fd = this._fdMgr.getFd(fdIndex);
     if (!fd) {
-      throw new VirtualFSError(errno.code.EBADF, null, null, 'write');
+      throw new VirtualFSError(code.EBADF, null, null, 'write');
     }
     if (typeof position === 'number' && position < 0) {
-      throw new VirtualFSError(errno.code.EINVAL, null, null, 'write');
+      throw new VirtualFSError(code.EINVAL, null, null, 'write');
     }
     const flags = fd.getFlags();
     if (!(flags & (constants.O_WRONLY | constants.O_RDWR))) {
-      throw new VirtualFSError(errno.code.EBADF, null, null, 'write');
+      throw new VirtualFSError(code.EBADF, null, null, 'write');
     }
     let buffer$$1;
-    if (data instanceof Buffer) {
+    if (typeof data === 'string') {
+      position = typeof offsetOrPos === 'number' ? offsetOrPos : null;
+      lengthOrEncoding = typeof lengthOrEncoding === 'string' ? lengthOrEncoding : 'utf8';
+      buffer$$1 = this._getBuffer(data, lengthOrEncoding);
+    } else {
+      offsetOrPos = typeof offsetOrPos === 'number' ? offsetOrPos : 0;
       if (offsetOrPos < 0 || offsetOrPos > data.length) {
         throw new RangeError('Offset is out of bounds');
       }
+      lengthOrEncoding = typeof lengthOrEncoding === 'number' ? lengthOrEncoding : data.length;
       if (lengthOrEncoding < 0 || lengthOrEncoding > data.length) {
         throw new RangeError('Length is out of bounds');
       }
-      buffer$$1 = data.slice(offsetOrPos, offsetOrPos + lengthOrEncoding);
-    } else {
-      position = offsetOrPos;
-      buffer$$1 = Buffer.from(data.toString(), lengthOrEncoding);
+      buffer$$1 = this._getBuffer(data).slice(offsetOrPos, offsetOrPos + lengthOrEncoding);
     }
     try {
       return fd.write(buffer$$1, position);
     } catch (e) {
       if (e instanceof RangeError) {
-        throw new VirtualFSError(errno.code.ENOSPC, null, null, 'write');
+        throw new VirtualFSError(code.EFBIG, null, null, 'write');
+      }
+      if (e instanceof VirtualFSError) {
+        e.setSyscall('write');
       }
       throw e;
     }
@@ -2061,7 +2865,7 @@ class VirtualFS {
 
   writeFile(file, data, ...args) {
     let cbIndex = args.findIndex(arg => typeof arg === 'function');
-    const callback = this._maybeCallback(args[cbIndex]);
+    const callback = args[cbIndex] || callbackUp;
     cbIndex = cbIndex >= 0 ? cbIndex : args.length;
     this._callAsync(this.writeFileSync.bind(this), [file, data, ...args.slice(0, cbIndex)], callback, callback);
     return;
@@ -2070,33 +2874,431 @@ class VirtualFS {
   writeFileSync(file, data = 'undefined', options) {
     options = this._getOptions({ encoding: 'utf8', flag: 'w' }, options);
     let fdIndex;
-    if (typeof file === 'string') {
-      fdIndex = this.openSync(file, options.flag);
-    } else if (typeof file !== 'number') {
-      throw TypeError('file must be a string or number');
+    try {
+      const buffer$$1 = this._getBuffer(data, options.encoding);
+      if (typeof file === 'number') {
+        this.writeSync(file, buffer$$1, 0, buffer$$1.length, 0);
+      } else {
+        fdIndex = this.openSync(file, options.flag);
+        this.writeSync(fdIndex, buffer$$1, 0, buffer$$1.length, 0);
+      }
+    } finally {
+      if (fdIndex !== undefined) this.closeSync(fdIndex);
     }
-    let buffer$$1;
-    if (typeof data === 'string') {
-      buffer$$1 = Buffer.from(data, options.encoding);
-    } else {
-      buffer$$1 = data;
-    }
-    if (fdIndex !== undefined) {
-      this.writeSync(fdIndex, buffer$$1, 0, buffer$$1.length, 0);
-    } else {
-      this.writeSync(file, buffer$$1, 0, buffer$$1.length, 0);
-    }
-    if (fdIndex !== undefined) this.closeSync(fdIndex);
     return;
+  }
+
+  /**
+   * Sets up an asynchronous call in accordance with Node behaviour.
+   * This function should be implemented with microtask semantics.
+   * Because the internal readable-stream package uses process.nextTick.
+   * This must also use process.nextTick as well to be on the same queue.
+   * It is required to polyfill the process.nextTick for browsers.
+   * @private
+   */
+  _callAsync(syncFn, args, successCall, failCall) {
+    nextTick(() => {
+      try {
+        let result = syncFn(...args);
+        result = result === undefined ? null : result;
+        successCall(result);
+      } catch (e) {
+        failCall(e);
+      }
+    });
+    return;
+  }
+
+  /**
+   * Processes path types and collapses it to a string.
+   * The path types can be string or Buffer or URL.
+   * @private
+   */
+  _getPath(path) {
+    if (typeof path === 'string') {
+      return path;
+    }
+    if (path instanceof Buffer$1) {
+      return path.toString();
+    }
+    if (typeof path === 'object' && typeof path.pathname === 'string') {
+      return this._getPathFromURL(path);
+    }
+    throw new TypeError('path must be a string or Buffer or URL');
+  }
+
+  /**
+   * Acquires the file path from an URL object.
+   * @private
+   */
+  _getPathFromURL(url) {
+    if (url.hostname) {
+      throw new TypeError('ERR_INVALID_FILE_URL_HOST');
+    }
+    const pathname = url.pathname;
+    if (pathname.match(/%2[fF]/)) {
+      // must not allow encoded slashes
+      throw new TypeError('ERR_INVALID_FILE_URL_PATH');
+    }
+    return decodeURIComponent(pathname);
+  }
+
+  /**
+   * Processes data types and collapses it to a Buffer.
+   * The data types can be Buffer or Uint8Array or string.
+   * @private
+   */
+  _getBuffer(data, encoding = null) {
+    if (data instanceof Buffer$1) {
+      return data;
+    }
+    if (data instanceof Uint8Array) {
+      // zero copy implementation
+      // also sliced to the view's constraint
+      return Buffer$1.from(data.buffer).slice(data.byteOffset, data.byteOffset + data.byteLength);
+    }
+    if (typeof data === 'string') {
+      return Buffer$1.from(data, encoding);
+    }
+    throw new TypeError('data must be Buffer or Uint8Array or string');
+  }
+
+  /**
+   * Takes a default set of options, and merges them shallowly into the user provided options.
+   * Object spread syntax will ignore an undefined or null options object.
+   * @private
+   */
+  _getOptions(defaultOptions, options) {
+    if (typeof options === 'string') {
+      return _extends({}, defaultOptions, { encoding: options });
+    } else {
+      return _extends({}, defaultOptions, options);
+    }
+  }
+
+  /**
+   * Checks the permissions fixng the current uid and gid.
+   * If the user is root, they can access anything.
+   * @private
+   */
+  _checkPermissions(access, stat) {
+    if (this._uid !== DEFAULT_ROOT_UID) {
+      return checkPermissions(access, this._uid, this._gid, stat);
+    } else {
+      return true;
+    }
+  }
+
+  /**
+   * Parses and extracts the first path segment.
+   * @private
+   */
+  _parsePath(pathS) {
+    const matches = pathS.match(/^([\s\S]*?)(?:\/+|$)([\s\S]*)/);
+    if (matches) {
+      let segment = matches[1] || '';
+      let rest = matches[2] || '';
+      return {
+        segment: segment,
+        rest: rest
+      };
+    } else {
+      // this should not happen
+      throw new Error('Could not parse pathS: ' + pathS);
+    }
+  }
+
+  /**
+   * Navigates the filesystem tree from root.
+   * You can interpret the results like:
+   *   !target       => Non-existent segment
+   *   name === ''   => Target is at root
+   *   name === '.'  => dir is the same as target
+   *   name === '..' => dir is a child directory
+   * @private
+   */
+  _navigate(pathS, resolveLastLink = true, activeSymlinks = new _Set(), origPathS = pathS) {
+    if (!pathS) {
+      throw new VirtualFSError(code.ENOENT, origPathS);
+    }
+    // multiple consecutive slashes are considered to be 1 slash
+    pathS = pathS.replace(/\/+/, '/');
+    // a trailing slash is considered to refer to a directory, thus it is converted to /.
+    // functions that expect and specially handle missing directories should trim it away
+    pathS = pathS.replace(/\/$/, '/.');
+    if (pathS[0] === '/') {
+      pathS = pathS.substring(1);
+      if (!pathS) {
+        return {
+          dir: this._root,
+          target: this._root,
+          name: '', // root is the only situation where the name is empty
+          remaining: '',
+          pathStack: []
+        };
+      } else {
+        return this._navigateFrom(this._root, pathS, resolveLastLink, activeSymlinks, [], origPathS);
+      }
+    } else {
+      return this._navigateFrom(this._cwd.getINode(), pathS, resolveLastLink, activeSymlinks, this._cwd.getPathStack(), origPathS);
+    }
+  }
+
+  /**
+   * Navigates the filesystem tree from a given directory.
+   * You should not use this directly unless you first call _navigate and pass the remaining path to _navigateFrom.
+   * Note that the pathStack is always the full path to the target.
+   * @private
+   */
+  _navigateFrom(curdir, pathS, resolveLastLink = true, activeSymlinks = new _Set(), pathStack = [], origPathS = pathS) {
+    if (!pathS) {
+      throw new VirtualFSError(code.ENOENT, origPathS);
+    }
+    if (!this._checkPermissions(constants.X_OK, curdir.getMetadata())) {
+      throw new VirtualFSError(code.EACCES, origPathS);
+    }
+    let parse = this._parsePath(pathS);
+    if (parse.segment !== '.') {
+      if (parse.segment === '..') {
+        pathStack.pop(); // this is a noop if the pathStack is empty
+      } else {
+        pathStack.push(parse.segment);
+      }
+    }
+    let nextDir;
+    let nextPath;
+    let target = curdir.getEntry(parse.segment);
+    if (target instanceof File || target instanceof CharacterDev) {
+      if (!parse.rest) {
+        return {
+          dir: curdir,
+          target: target,
+          name: parse.segment,
+          remaining: '',
+          pathStack: pathStack
+        };
+      }
+      throw new VirtualFSError(code.ENOTDIR, origPathS);
+    } else if (target instanceof Directory) {
+      if (!parse.rest) {
+        // if parse.segment is ., dir is not the same directory as target
+        // if parse.segment is .., dir is the child directory
+        return {
+          dir: curdir,
+          target: target,
+          name: parse.segment,
+          remaining: '',
+          pathStack: pathStack
+        };
+      }
+      nextDir = target;
+      nextPath = parse.rest;
+    } else if (target instanceof Symlink) {
+      if (!resolveLastLink && !parse.rest) {
+        return {
+          dir: curdir,
+          target: target,
+          name: parse.segment,
+          remaining: '',
+          pathStack: pathStack
+        };
+      }
+      if (activeSymlinks.has(target)) {
+        throw new VirtualFSError(code.ELOOP, origPathS);
+      } else {
+        activeSymlinks.add(target);
+      }
+      // although symlinks should not have an empty links, it's still handled correctly here
+      nextPath = join(target.getLink(), parse.rest);
+      if (nextPath[0] === '/') {
+        return this._navigate(nextPath, resolveLastLink, activeSymlinks, origPathS);
+      } else {
+        pathStack.pop();
+        nextDir = curdir;
+      }
+    } else {
+      return {
+        dir: curdir,
+        target: null,
+        name: parse.segment,
+        remaining: parse.rest,
+        pathStack: pathStack
+      };
+    }
+    return this._navigateFrom(nextDir, nextPath, resolveLastLink, activeSymlinks, pathStack, origPathS);
   }
 
 }
 
-/** @module VirtualFS */
+const nullDev = {
+  setPos: (fd, position, flags) => {
+    fd._pos = 0;
+    return;
+  },
+  read: (fd, buffer$$1, position) => {
+    return 0;
+  },
+  write: (fd, buffer$$1, position, extraFlags) => {
+    return buffer$$1.length;
+  }
+};
 
-// singleton version of VirtualFS
-// useful for sharing a single VirtualFS instance across modules
-// without directly passing VirtualFS
-var VirtualFSSingle = new VirtualFS();
+const zeroDev = {
+  setPos: (fd, position, flags) => {
+    fd._pos = 0;
+    return;
+  },
+  read: (fd, buffer$$1, position) => {
+    buffer$$1.fill(0);
+    return buffer$$1.length;
+  },
+  write: (fd, buffer$$1, position, extraFlags) => {
+    return buffer$$1.length;
+  }
+};
 
-export { VirtualFS, VirtualFSError, VirtualFSSingle, Stat, File, Directory, Symlink, FileDescriptor, ReadStream, WriteStream, constants };
+/** @module Full */
+
+const fullDev = {
+  setPos: (fd, position, flags) => {
+    fd._pos = 0;
+    return;
+  },
+  read: (fd, buffer$$1, position) => {
+    buffer$$1.fill(0);
+    return buffer$$1.length;
+  },
+  write: (fd, buffer$$1, position, extraFlags) => {
+    throw new VirtualFSError(code.ENOSPC);
+  }
+};
+
+/** @module Random */
+
+const randomDev = {
+  setPos: (fd, position, flags) => {
+    fd._pos = 0;
+    return;
+  },
+  read: (fd, buffer$$1, position) => {
+    const randomBuf = Buffer.from(randomBytes(buffer$$1.length), 'ascii');
+    randomBuf.copy(buffer$$1);
+    return randomBuf.length;
+  },
+  write: (fd, buffer$$1, position, extraFlags) => {
+    return buffer$$1.length;
+  }
+};
+
+// $FlowFixMe: Buffer exists
+/** @module Tty */
+
+let fds = 0;
+let fs$2 = null;
+let ttyInFd = null;
+let ttyOutFd = null;
+
+const ttyDev = {
+  open: fd => {
+    if (fds === 0) {
+      if (process.release && process.release.name === 'node') {
+        fs$2 = require('fs');
+        ttyOutFd = process.stdout.fd;
+        if (process.platform === 'win32') {
+          // on windows, stdin is in blocking mode
+          // NOTE: on windows node repl environment, stdin is in raw mode
+          //       make sure to set process.stdin.setRawMode(false)
+          ttyInFd = process.stdin.fd;
+        } else {
+          // on non-windows, stdin is in non-blocking mode
+          // to get blocking semantics we need to reopen stdin
+          try {
+            // if there are problems opening this
+            // we assume there is no stdin
+            ttyInFd = fs$2.openSync('/dev/fd/0', 'rs');
+          } catch (e) {}
+        }
+      }
+    }
+    ++fds;
+  },
+  close: fd => {
+    --fds;
+    if (fds === 0) {
+      if (ttyInFd && fs$2) {
+        fs$2.closeSync(ttyInFd);
+      }
+    }
+  },
+  read: (fd, buffer$$1, position) => {
+    if (ttyInFd !== null && fs$2) {
+      // $FlowFixMe: position parameter allows null
+      return fs$2.readSync(ttyInFd, buffer$$1, 0, buffer$$1.length, null);
+    } else {
+      if (window && window.prompt) {
+        return Buffer$1.from(window.prompt()).copy(buffer$$1);
+      }
+      throw new VirtualFSError(code.ENXIO);
+    }
+  },
+  write: (fd, buffer$$1, position, extraFlags) => {
+    if (ttyOutFd !== null && fs$2) {
+      return fs$2.writeSync(ttyOutFd, buffer$$1);
+    } else {
+      console.log(buffer$$1.toString());
+      return buffer$$1.length;
+    }
+  }
+};
+
+/** @module VirtualFSSingleton */
+
+const devMgr = new DeviceManager();
+
+devMgr.registerChr(nullDev, 1, 3);
+devMgr.registerChr(zeroDev, 1, 5);
+devMgr.registerChr(fullDev, 1, 7);
+devMgr.registerChr(randomDev, 1, 8);
+devMgr.registerChr(randomDev, 1, 9);
+devMgr.registerChr(ttyDev, 4, 0);
+devMgr.registerChr(ttyDev, 5, 0);
+devMgr.registerChr(ttyDev, 5, 1);
+
+const fs = new VirtualFS(undefined, undefined, devMgr);
+
+fs.mkdirSync('/dev');
+fs.chmodSync('/dev', 0o775);
+
+fs.mknodSync('/dev/null', constants.S_IFCHR, 1, 3);
+fs.mknodSync('/dev/zero', constants.S_IFCHR, 1, 5);
+fs.mknodSync('/dev/full', constants.S_IFCHR, 1, 7);
+fs.mknodSync('/dev/random', constants.S_IFCHR, 1, 8);
+fs.mknodSync('/dev/urandom', constants.S_IFCHR, 1, 9);
+fs.chmodSync('/dev/null', 0o666);
+fs.chmodSync('/dev/zero', 0o666);
+fs.chmodSync('/dev/full', 0o666);
+fs.chmodSync('/dev/random', 0o666);
+fs.chmodSync('/dev/urandom', 0o666);
+
+// tty0 points to the currently active virtual console (on linux this is usually tty1 or tty7)
+// tty points to the currently active console (physical, virtual or pseudo)
+// console points to the system console (it defaults to tty0)
+// refer to the tty character device to understand its implementation
+fs.mknodSync('/dev/tty0', constants.S_IFCHR, 4, 0);
+fs.mknodSync('/dev/tty', constants.S_IFCHR, 5, 0);
+fs.mknodSync('/dev/console', constants.S_IFCHR, 5, 1);
+fs.chmodSync('/dev/tty0', 0o600);
+fs.chmodSync('/dev/tty', 0o666);
+fs.chmodSync('/dev/console', 0o600);
+
+fs.mkdirSync('/tmp');
+fs.chmodSync('/tmp', 0o777);
+
+fs.mkdirSync('/root');
+fs.chmodSync('/root', 0o700);
+
+export { VirtualFS, Stat, constants, nullDev, zeroDev, fullDev, randomDev, VirtualFSError, MAJOR_BITSIZE, MINOR_BITSIZE, MAJOR_MAX, MINOR_MAX, MAJOR_MIN, MINOR_MIN, DeviceManager, DeviceError, mkDev, unmkDev, File, Directory, Symlink, CharacterDev, INodeManager, FileDescriptor, FileDescriptorManager, ReadStream, WriteStream, DEFAULT_ROOT_UID, DEFAULT_ROOT_GID, DEFAULT_ROOT_PERM, DEFAULT_FILE_PERM, DEFAULT_DIRECTORY_PERM, DEFAULT_SYMLINK_PERM, applyUmask, checkPermissions };
+export default fs;
+export { Buffer } from 'buffer';
+export { nextTick } from 'process';
+export { errno } from 'errno';
