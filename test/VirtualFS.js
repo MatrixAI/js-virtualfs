@@ -2046,6 +2046,28 @@ test('changing file permissions does not affect already opened file descriptor',
   fs.closeSync(fd);
 });
 
+test('writeFileSync and appendFileSync respects the mode', t => {
+  const fs = new VirtualFS;
+  let stat;
+  let error;
+  // allow others to read only
+  fs.writeFileSync('/test1', '', { mode: 0o004 });
+  fs.appendFileSync('/test2', '', { mode: 0o004 });
+  // become the other
+  fs.setUid(1000);
+  fs.setGid(1000);
+  fs.accessSync('/test1', fs.constants.R_OK);
+  error = t.throws(() => {
+    fs.accessSync('/test1', fs.constants.W_OK);
+  });
+  t.is(error.code, 'EACCES');
+  fs.accessSync('/test2', fs.constants.R_OK);
+  error = t.throws(() => {
+    fs.accessSync('/test1', fs.constants.W_OK);
+  });
+  t.is(error.code, 'EACCES');
+});
+
 /////////////////////////////
 // Uint8Array data support //
 /////////////////////////////
