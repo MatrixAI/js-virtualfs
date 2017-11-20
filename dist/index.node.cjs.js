@@ -2879,14 +2879,18 @@ class VirtualFS {
   }
 
   writeFileSync(file, data = 'undefined', options) {
-    options = this._getOptions({ encoding: 'utf8', flag: 'w' }, options);
+    options = this._getOptions({
+      encoding: 'utf8',
+      mode: DEFAULT_FILE_PERM,
+      flag: 'w'
+    }, options);
     let fdIndex;
     try {
       const buffer$$1 = this._getBuffer(data, options.encoding);
       if (typeof file === 'number') {
         this.writeSync(file, buffer$$1, 0, buffer$$1.length, 0);
       } else {
-        fdIndex = this.openSync(file, options.flag);
+        fdIndex = this.openSync(file, options.flag, options.mode);
         this.writeSync(fdIndex, buffer$$1, 0, buffer$$1.length, 0);
       }
     } finally {

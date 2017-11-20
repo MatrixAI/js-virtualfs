@@ -13707,14 +13707,18 @@ var VirtualFS = function () {
       var data = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 'undefined';
       var options = arguments[2];
 
-      options = this._getOptions({ encoding: 'utf8', flag: 'w' }, options);
+      options = this._getOptions({
+        encoding: 'utf8',
+        mode: DEFAULT_FILE_PERM,
+        flag: 'w'
+      }, options);
       var fdIndex = void 0;
       try {
         var buffer$$1 = this._getBuffer(data, options.encoding);
         if (typeof file === 'number') {
           this.writeSync(file, buffer$$1, 0, buffer$$1.length, 0);
         } else {
-          fdIndex = this.openSync(file, options.flag);
+          fdIndex = this.openSync(file, options.flag, options.mode);
           this.writeSync(fdIndex, buffer$$1, 0, buffer$$1.length, 0);
         }
       } finally {
