@@ -25,7 +25,7 @@ This package will be maintained as long as the Polykey project is maintained. Al
 Documentation
 --------------
 
-Documentation is located in the `doc` folder. You can also view the [rendered HTML](https://cdn.rawgit.com/MatrixAI/js-virtualfs/23a494a0/doc/index.html).
+Documentation is located in the `doc` folder. You can also view the [rendered HTML](https://cdn.rawgit.com/MatrixAI/js-virtualfs/b5ed843/doc/index.html).
 
 The VirtualFS API extends Node's `fs` API, while also leaving out functions that are not emulatable in-memory. For the functions that have the same name, you can just refer to Node's FS API: https://nodejs.org/api/fs.html. For the functions that don't have the name, refer to the generated API documentation that uses flow types. The source code is understandable so you can just read that as well.
 
