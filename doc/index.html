@@ -2,7 +2,7 @@
 <html>
 <head>
   <meta charset='utf-8' />
-  <title>virtualfs 1.0.0 | Documentation</title>
+  <title>virtualfs 2.0.2 | Documentation</title>
   <meta name='viewport' content='width=device-width,initial-scale=1'>
   <link href='assets/bass.css' type='text/css' rel='stylesheet' />
   <link href='assets/style.css' type='text/css' rel='stylesheet' />
@@ -14,7 +14,7 @@
       <div id='split-left' class='overflow-auto fs0 height-viewport-100'>
         <div class='py1 px2'>
           <h3 class='mb0 no-anchor'>virtualfs</h3>
-          <div class='mb1'><code>1.0.0</code></div>
+          <div class='mb1'><code>2.0.2</code></div>
           <input
             placeholder='Filter'
             id='filter-input'
@@ -22,6 +22,76 @@
             type='text' />
           <div id='toc'>
             <ul class='list-reset h5 py1-ul'>
+              
+                
+                <li><a
+                  href='#currentdirectory'
+                  class="">
+                  CurrentDirectory
+                  
+                </a>
+                
+                </li>
+              
+                
+                <li><a
+                  href='#devices'
+                  class="">
+                  Devices
+                  
+                </a>
+                
+                </li>
+              
+                
+                <li><a
+                  href='#full'
+                  class="">
+                  Full
+                  
+                </a>
+                
+                </li>
+              
+                
+                <li><a
+                  href='#null'
+                  class="">
+                  Null
+                  
+                </a>
+                
+                </li>
+              
+                
+                <li><a
+                  href='#random'
+                  class="">
+                  Random
+                  
+                </a>
+                
+                </li>
+              
+                
+                <li><a
+                  href='#tty'
+                  class="">
+                  Tty
+                  
+                </a>
+                
+                </li>
+              
+                
+                <li><a
+                  href='#zero'
+                  class="">
+                  Zero
+                  
+                </a>
+                
+                </li>
               
                 
                 <li><a
@@ -46,12 +116,6 @@
                   
                     <ul class='list-reset py1-ul pl1'>
                       <li class='h5'><span>Instance members</span></li>
-                      
-                      <li><a
-                        href='#filedescriptorconstructor'
-                        class='regular pre-open'>
-                        #constructor
-                      </a></li>
                       
                       <li><a
                         href='#filedescriptorgetinode'
@@ -95,12 +159,6 @@
                         #write
                       </a></li>
                       
-                      <li><a
-                        href='#filedescriptortruncate'
-                        class='regular pre-open'>
-                        #truncate
-                      </a></li>
-                      
                     </ul>
                   
                   
@@ -124,12 +182,6 @@
                       <li class='h5'><span>Instance members</span></li>
                       
                       <li><a
-                        href='#filedescriptormanagerconstructor'
-                        class='regular pre-open'>
-                        #constructor
-                      </a></li>
-                      
-                      <li><a
                         href='#filedescriptormanagercreatefd'
                         class='regular pre-open'>
                         #createFd
@@ -139,6 +191,12 @@
                         href='#filedescriptormanagergetfd'
                         class='regular pre-open'>
                         #getFd
+                      </a></li>
+                      
+                      <li><a
+                        href='#filedescriptormanagerdupfd'
+                        class='regular pre-open'>
+                        #dupFd
                       </a></li>
                       
                       <li><a
@@ -180,12 +238,6 @@
                       <li class='h5'><span>Instance members</span></li>
                       
                       <li><a
-                        href='#inodeconstructor'
-                        class='regular pre-open'>
-                        #constructor
-                      </a></li>
-                      
-                      <li><a
                         href='#inodegetmetadata'
                         class='regular pre-open'>
                         #getMetadata
@@ -212,12 +264,6 @@
                   
                     <ul class='list-reset py1-ul pl1'>
                       <li class='h5'><span>Instance members</span></li>
-                      
-                      <li><a
-                        href='#fileconstructor'
-                        class='regular pre-open'>
-                        #constructor
-                      </a></li>
                       
                       <li><a
                         href='#filegetdata'
@@ -258,12 +304,6 @@
                   
                     <ul class='list-reset py1-ul pl1'>
                       <li class='h5'><span>Instance members</span></li>
-                      
-                      <li><a
-                        href='#directoryconstructor'
-                        class='regular pre-open'>
-                        #constructor
-                      </a></li>
                       
                       <li><a
                         href='#directorygetentries'
@@ -330,12 +370,6 @@
                       <li class='h5'><span>Instance members</span></li>
                       
                       <li><a
-                        href='#symlinkconstructor'
-                        class='regular pre-open'>
-                        #constructor
-                      </a></li>
-                      
-                      <li><a
                         href='#symlinkgetlink'
                         class='regular pre-open'>
                         #getLink
@@ -357,6 +391,16 @@
               
                 
                 <li><a
+                  href='#characterdev'
+                  class="">
+                  CharacterDev
+                  
+                </a>
+                
+                </li>
+              
+                
+                <li><a
                   href='#inodemanager'
                   class=" toggle-sibling">
                   INodeManager
@@ -368,12 +412,6 @@
                   
                     <ul class='list-reset py1-ul pl1'>
                       <li class='h5'><span>Instance members</span></li>
-                      
-                      <li><a
-                        href='#inodemanagerconstructor'
-                        class='regular pre-open'>
-                        #constructor
-                      </a></li>
                       
                       <li><a
                         href='#inodemanagercreateinode'
@@ -399,11 +437,129 @@
                         #unlinkINode
                       </a></li>
                       
+                      <li><a
+                        href='#inodemanagerrefinode'
+                        class='regular pre-open'>
+                        #refINode
+                      </a></li>
+                      
+                      <li><a
+                        href='#inodemanagerunrefinode'
+                        class='regular pre-open'>
+                        #unrefINode
+                      </a></li>
+                      
+                      <li><a
+                        href='#inodemanager_gcinode'
+                        class='regular pre-open'>
+                        #_gcINode
+                      </a></li>
+                      
                     </ul>
                   
                   
                   
                 </div>
+                
+                </li>
+              
+                
+                <li><a
+                  href='#permissions'
+                  class="">
+                  Permissions
+                  
+                </a>
+                
+                </li>
+              
+                
+                <li><a
+                  href='#default_root_uid'
+                  class="">
+                  DEFAULT_ROOT_UID
+                  
+                </a>
+                
+                </li>
+              
+                
+                <li><a
+                  href='#default_root_gid'
+                  class="">
+                  DEFAULT_ROOT_GID
+                  
+                </a>
+                
+                </li>
+              
+                
+                <li><a
+                  href='#default_root_perm'
+                  class="">
+                  DEFAULT_ROOT_PERM
+                  
+                </a>
+                
+                </li>
+              
+                
+                <li><a
+                  href='#default_file_perm'
+                  class="">
+                  DEFAULT_FILE_PERM
+                  
+                </a>
+                
+                </li>
+              
+                
+                <li><a
+                  href='#default_directory_perm'
+                  class="">
+                  DEFAULT_DIRECTORY_PERM
+                  
+                </a>
+                
+                </li>
+              
+                
+                <li><a
+                  href='#default_symlink_perm'
+                  class="">
+                  DEFAULT_SYMLINK_PERM
+                  
+                </a>
+                
+                </li>
+              
+                
+                <li><a
+                  href='#applyumask'
+                  class="">
+                  applyUmask
+                  
+                </a>
+                
+                </li>
+              
+                
+                <li><a
+                  href='#resolveownership'
+                  class="">
+                  resolveOwnership
+                  
+                </a>
+                
+                </li>
+              
+                
+                <li><a
+                  href='#checkpermissions'
+                  class="">
+                  checkPermissions
+                  
+                </a>
                 
                 </li>
               
@@ -420,12 +576,6 @@
                   
                     <ul class='list-reset py1-ul pl1'>
                       <li class='h5'><span>Instance members</span></li>
-                      
-                      <li><a
-                        href='#statconstructor'
-                        class='regular pre-open'>
-                        #constructor
-                      </a></li>
                       
                       <li><a
                         href='#statisfile'
@@ -490,12 +640,6 @@
                   
                     <ul class='list-reset py1-ul pl1'>
                       <li class='h5'><span>Instance members</span></li>
-                      
-                      <li><a
-                        href='#statconstructor'
-                        class='regular pre-open'>
-                        #constructor
-                      </a></li>
                       
                       <li><a
                         href='#statisfile'
@@ -560,168 +704,80 @@
                 
                 <li><a
                   href='#readstream'
-                  class=" toggle-sibling">
+                  class="">
                   ReadStream
-                  <span class='icon'>▸</span>
+                  
                 </a>
-                
-                <div class='toggle-target display-none'>
-                  
-                  
-                    <ul class='list-reset py1-ul pl1'>
-                      <li class='h5'><span>Instance members</span></li>
-                      
-                      <li><a
-                        href='#readstreamconstructor'
-                        class='regular pre-open'>
-                        #constructor
-                      </a></li>
-                      
-                    </ul>
-                  
-                  
-                  
-                </div>
                 
                 </li>
               
                 
                 <li><a
                   href='#writestream'
-                  class=" toggle-sibling">
+                  class="">
                   WriteStream
-                  <span class='icon'>▸</span>
+                  
                 </a>
-                
-                <div class='toggle-target display-none'>
-                  
-                  
-                    <ul class='list-reset py1-ul pl1'>
-                      <li class='h5'><span>Instance members</span></li>
-                      
-                      <li><a
-                        href='#writestreamconstructor'
-                        class='regular pre-open'>
-                        #constructor
-                      </a></li>
-                      
-                    </ul>
-                  
-                  
-                  
-                </div>
                 
                 </li>
               
                 
                 <li><a
                   href='#virtualfs'
-                  class=" toggle-sibling">
+                  class="">
                   VirtualFS
-                  <span class='icon'>▸</span>
+                  
                 </a>
-                
-                <div class='toggle-target display-none'>
-                  
-                  
-                    <ul class='list-reset py1-ul pl1'>
-                      <li class='h5'><span>Instance members</span></li>
-                      
-                      <li><a
-                        href='#virtualfsconstructor'
-                        class='regular pre-open'>
-                        #constructor
-                      </a></li>
-                      
-                    </ul>
-                  
-                  
-                  
-                </div>
                 
                 </li>
               
                 
                 <li><a
                   href='#virtualfs'
-                  class=" toggle-sibling">
+                  class="">
                   VirtualFS
-                  <span class='icon'>▸</span>
+                  
                 </a>
-                
-                <div class='toggle-target display-none'>
-                  
-                  
-                    <ul class='list-reset py1-ul pl1'>
-                      <li class='h5'><span>Instance members</span></li>
-                      
-                      <li><a
-                        href='#virtualfsconstructor'
-                        class='regular pre-open'>
-                        #constructor
-                      </a></li>
-                      
-                    </ul>
-                  
-                  
-                  
-                </div>
                 
                 </li>
               
                 
                 <li><a
-                  href='#virtualfs'
-                  class=" toggle-sibling">
-                  VirtualFS
-                  <span class='icon'>▸</span>
+                  href='#callbackup'
+                  class="">
+                  callbackUp
+                  
                 </a>
-                
-                <div class='toggle-target display-none'>
-                  
-                  
-                    <ul class='list-reset py1-ul pl1'>
-                      <li class='h5'><span>Instance members</span></li>
-                      
-                      <li><a
-                        href='#virtualfsconstructor'
-                        class='regular pre-open'>
-                        #constructor
-                      </a></li>
-                      
-                    </ul>
-                  
-                  
-                  
-                </div>
                 
                 </li>
               
                 
                 <li><a
                   href='#virtualfserror'
-                  class=" toggle-sibling">
+                  class="">
                   VirtualFSError
-                  <span class='icon'>▸</span>
+                  
                 </a>
                 
-                <div class='toggle-target display-none'>
+                </li>
+              
+                
+                <li><a
+                  href='#virtualfserror'
+                  class="">
+                  VirtualFSError
                   
+                </a>
+                
+                </li>
+              
+                
+                <li><a
+                  href='#virtualfssingleton'
+                  class="">
+                  VirtualFSSingleton
                   
-                    <ul class='list-reset py1-ul pl1'>
-                      <li class='h5'><span>Instance members</span></li>
-                      
-                      <li><a
-                        href='#virtualfserrorconstructor'
-                        class='regular pre-open'>
-                        #constructor
-                      </a></li>
-                      
-                    </ul>
-                  
-                  
-                  
-                </div>
+                </a>
                 
                 </li>
               
@@ -733,6 +789,328 @@
         </div>
       </div>
       <div id='split-right' class='relative overflow-auto height-viewport-100'>
+        
+          
+            <section class='p2 mb2 clearfix bg-white minishadow'>
+
+  
+  <div class='clearfix'>
+    
+    <h3 class='fl m0' id='currentdirectory'>
+      CurrentDirectory
+    </h3>
+    
+    
+  </div>
+  
+
+  
+
+  <div class='pre p1 fill-light mt0'>CurrentDirectory</div>
+  
+  
+
+  
+  
+  
+  
+  
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+</section>
+
+          
+        
+          
+            <section class='p2 mb2 clearfix bg-white minishadow'>
+
+  
+  <div class='clearfix'>
+    
+    <h3 class='fl m0' id='devices'>
+      Devices
+    </h3>
+    
+    
+  </div>
+  
+
+  
+
+  <div class='pre p1 fill-light mt0'>Devices</div>
+  
+  
+
+  
+  
+  
+  
+  
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+</section>
+
+          
+        
+          
+            <section class='p2 mb2 clearfix bg-white minishadow'>
+
+  
+  <div class='clearfix'>
+    
+    <h3 class='fl m0' id='full'>
+      Full
+    </h3>
+    
+    
+  </div>
+  
+
+  
+
+  <div class='pre p1 fill-light mt0'>Full</div>
+  
+  
+
+  
+  
+  
+  
+  
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+</section>
+
+          
+        
+          
+            <section class='p2 mb2 clearfix bg-white minishadow'>
+
+  
+  <div class='clearfix'>
+    
+    <h3 class='fl m0' id='null'>
+      Null
+    </h3>
+    
+    
+  </div>
+  
+
+  
+
+  <div class='pre p1 fill-light mt0'>Null</div>
+  
+  
+
+  
+  
+  
+  
+  
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+</section>
+
+          
+        
+          
+            <section class='p2 mb2 clearfix bg-white minishadow'>
+
+  
+  <div class='clearfix'>
+    
+    <h3 class='fl m0' id='random'>
+      Random
+    </h3>
+    
+    
+  </div>
+  
+
+  
+
+  <div class='pre p1 fill-light mt0'>Random</div>
+  
+  
+
+  
+  
+  
+  
+  
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+</section>
+
+          
+        
+          
+            <section class='p2 mb2 clearfix bg-white minishadow'>
+
+  
+  <div class='clearfix'>
+    
+    <h3 class='fl m0' id='tty'>
+      Tty
+    </h3>
+    
+    
+  </div>
+  
+
+  
+
+  <div class='pre p1 fill-light mt0'>Tty</div>
+  
+  
+
+  
+  
+  
+  
+  
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+</section>
+
+          
+        
+          
+            <section class='p2 mb2 clearfix bg-white minishadow'>
+
+  
+  <div class='clearfix'>
+    
+    <h3 class='fl m0' id='zero'>
+      Zero
+    </h3>
+    
+    
+  </div>
+  
+
+  
+
+  <div class='pre p1 fill-light mt0'>Zero</div>
+  
+  
+
+  
+  
+  
+  
+  
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+</section>
+
+          
         
           
             <section class='p2 mb2 clearfix bg-white minishadow'>
@@ -797,7 +1175,7 @@
   <p>Class representing a File Descriptor</p>
 
 
-  <div class='pre p1 fill-light mt0'>new FileDescriptor(inode: $Subtype&#x3C;<a href="#inode">INode</a>>, flags: <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a>)</div>
+  <div class='pre p1 fill-light mt0'>new FileDescriptor(iNode: I, flags: <a href="https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a>)</div>
   
   
 
@@ -814,7 +1192,7 @@
       
         <div class='space-bottom0'>
           <div>
-            <span class='code bold'>inode</span> <code class='quiet'>($Subtype&#x3C;<a href="#inode">INode</a>>)</code>
+            <span class='code bold'>iNode</span> <code class='quiet'>(I)</code>
 	    
           </div>
           
@@ -822,7 +1200,7 @@
       
         <div class='space-bottom0'>
           <div>
-            <span class='code bold'>flags</span> <code class='quiet'>(<a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a>)</code>
+            <span class='code bold'>flags</span> <code class='quiet'>(<a href="https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a>)</code>
 	    
           </div>
           
@@ -845,74 +1223,6 @@
     <div class='py1 quiet mt1 prose-big'>Instance Members</div>
     <div class="clearfix">
   
-    <div class='border-bottom' id='filedescriptorconstructor'>
-      <div class="clearfix small pointer toggle-sibling">
-        <div class="py1 contain">
-            <a class='icon pin-right py1 dark-link caret-right'>▸</a>
-            <span class='code strong strong truncate'>constructor(inode, flags)</span>
-        </div>
-      </div>
-      <div class="clearfix display-none toggle-target">
-        <section class='p2 mb2 clearfix bg-white minishadow'>
-
-  
-
-  <p>Creates FileDescriptor
-Starts the seek position at 0</p>
-
-
-  <div class='pre p1 fill-light mt0'>constructor(inode: $Subtype&#x3C;<a href="#inode">INode</a>>, flags: <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a>)</div>
-  
-  
-
-  
-  
-  
-  
-  
-  
-
-  
-    <div class='py1 quiet mt1 prose-big'>Parameters</div>
-    <div class='prose'>
-      
-        <div class='space-bottom0'>
-          <div>
-            <span class='code bold'>inode</span> <code class='quiet'>($Subtype&#x3C;<a href="#inode">INode</a>>)</code>
-	    
-          </div>
-          
-        </div>
-      
-        <div class='space-bottom0'>
-          <div>
-            <span class='code bold'>flags</span> <code class='quiet'>(<a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a>)</code>
-	    
-          </div>
-          
-        </div>
-      
-    </div>
-  
-
-  
-
-  
-
-  
-
-  
-
-  
-
-  
-
-  
-</section>
-
-      </div>
-    </div>
-  
     <div class='border-bottom' id='filedescriptorgetinode'>
       <div class="clearfix small pointer toggle-sibling">
         <div class="py1 contain">
@@ -928,7 +1238,7 @@ Starts the seek position at 0</p>
   <p>Gets an INode.</p>
 
 
-  <div class='pre p1 fill-light mt0'>getINode(): $Subtype&#x3C;<a href="#inode">INode</a>></div>
+  <div class='pre p1 fill-light mt0'>getINode(): I</div>
   
   
 
@@ -946,7 +1256,7 @@ Starts the seek position at 0</p>
   
     
       <div class='py1 quiet mt1 prose-big'>Returns</div>
-      <code>$Subtype&#x3C;<a href="#inode">INode</a>></code>
+      <code>I</code>
     
   
 
@@ -980,7 +1290,7 @@ Starts the seek position at 0</p>
 Unlike Linux filesystems, this retains creation and status flags.</p>
 
 
-  <div class='pre p1 fill-light mt0'>getFlags(): <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a></div>
+  <div class='pre p1 fill-light mt0'>getFlags(): <a href="https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a></div>
   
   
 
@@ -998,7 +1308,7 @@ Unlike Linux filesystems, this retains creation and status flags.</p>
   
     
       <div class='py1 quiet mt1 prose-big'>Returns</div>
-      <code><a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a></code>
+      <code><a href="https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a></code>
     
   
 
@@ -1031,7 +1341,7 @@ Unlike Linux filesystems, this retains creation and status flags.</p>
   <p>Sets the file descriptor flags.</p>
 
 
-  <div class='pre p1 fill-light mt0'>setFlags(flags: <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a>): void</div>
+  <div class='pre p1 fill-light mt0'>setFlags(flags: <a href="https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a>): void</div>
   
   
 
@@ -1048,7 +1358,7 @@ Unlike Linux filesystems, this retains creation and status flags.</p>
       
         <div class='space-bottom0'>
           <div>
-            <span class='code bold'>flags</span> <code class='quiet'>(<a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a>)</code>
+            <span class='code bold'>flags</span> <code class='quiet'>(<a href="https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a>)</code>
 	    
           </div>
           
@@ -1095,7 +1405,7 @@ Unlike Linux filesystems, this retains creation and status flags.</p>
   <p>Gets the file descriptor position.</p>
 
 
-  <div class='pre p1 fill-light mt0'>getPos(): <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a></div>
+  <div class='pre p1 fill-light mt0'>getPos(): <a href="https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a></div>
   
   
 
@@ -1113,7 +1423,7 @@ Unlike Linux filesystems, this retains creation and status flags.</p>
   
     
       <div class='py1 quiet mt1 prose-big'>Returns</div>
-      <code><a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a></code>
+      <code><a href="https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a></code>
     
   
 
@@ -1135,7 +1445,7 @@ Unlike Linux filesystems, this retains creation and status flags.</p>
       <div class="clearfix small pointer toggle-sibling">
         <div class="py1 contain">
             <a class='icon pin-right py1 dark-link caret-right'>▸</a>
-            <span class='code strong strong truncate'>setPos(pos)</span>
+            <span class='code strong strong truncate'>setPos(pos, flags)</span>
         </div>
       </div>
       <div class="clearfix display-none toggle-target">
@@ -1146,7 +1456,7 @@ Unlike Linux filesystems, this retains creation and status flags.</p>
   <p>Sets the file descriptor position.</p>
 
 
-  <div class='pre p1 fill-light mt0'>setPos(pos: <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a>): void</div>
+  <div class='pre p1 fill-light mt0'>setPos(pos: <a href="https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a>, flags: <a href="https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a>): void</div>
   
   
 
@@ -1163,7 +1473,16 @@ Unlike Linux filesystems, this retains creation and status flags.</p>
       
         <div class='space-bottom0'>
           <div>
-            <span class='code bold'>pos</span> <code class='quiet'>(<a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a>)</code>
+            <span class='code bold'>pos</span> <code class='quiet'>(<a href="https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a>)</code>
+	    
+          </div>
+          
+        </div>
+      
+        <div class='space-bottom0'>
+          <div>
+            <span class='code bold'>flags</span> <code class='quiet'>(<a href="https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a>
+            = <code>constants.SEEK_SET</code>)</code>
 	    
           </div>
           
@@ -1181,14 +1500,6 @@ Unlike Linux filesystems, this retains creation and status flags.</p>
     
   
 
-  
-    <div class='py1 quiet mt1 prose-big'>Throws</div>
-    <ul>
-      
-        <li><a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/TypeError">TypeError</a>: Will throw if not a File INode
-</li>
-      
-    </ul>
   
 
   
@@ -1218,10 +1529,10 @@ Unlike Linux filesystems, this retains creation and status flags.</p>
   <p>Reads from this file descriptor into a buffer.
 It will always try to fill the input buffer.
 If position is specified, the position change does not persist.
-If the current file descriptor position is greater than the length of the data, this will read 0 bytes.</p>
+If the current file descriptor position is greater than or equal to the length of the data, this will read 0 bytes.</p>
 
 
-  <div class='pre p1 fill-light mt0'>read(buffer: <a href="https://nodejs.org/api/buffer.html">Buffer</a>, position: (<a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a> | null)): <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a></div>
+  <div class='pre p1 fill-light mt0'>read(buffer: <a href="https://nodejs.org/api/buffer.html">Buffer</a>, position: (<a href="https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a> | null)): <a href="https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a></div>
   
   
 
@@ -1246,7 +1557,7 @@ If the current file descriptor position is greater than the length of the data, 
       
         <div class='space-bottom0'>
           <div>
-            <span class='code bold'>position</span> <code class='quiet'>((<a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a> | null)
+            <span class='code bold'>position</span> <code class='quiet'>((<a href="https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a> | null)
             = <code>null</code>)</code>
 	    
           </div>
@@ -1261,18 +1572,10 @@ If the current file descriptor position is greater than the length of the data, 
   
     
       <div class='py1 quiet mt1 prose-big'>Returns</div>
-      <code><a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a></code>
+      <code><a href="https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a></code>
     
   
 
-  
-    <div class='py1 quiet mt1 prose-big'>Throws</div>
-    <ul>
-      
-        <li><a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/TypeError">TypeError</a>: Will throw if not a File INode
-</li>
-      
-    </ul>
   
 
   
@@ -1303,7 +1606,7 @@ If the current file descriptor position is greater than the length of the data, 
 If position is specified, the position change does not persist.</p>
 
 
-  <div class='pre p1 fill-light mt0'>write(buffer: <a href="https://nodejs.org/api/buffer.html">Buffer</a>, position: (<a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a> | null), extraFlags: <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a>)</div>
+  <div class='pre p1 fill-light mt0'>write(buffer: <a href="https://nodejs.org/api/buffer.html">Buffer</a>, position: (<a href="https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a> | null), extraFlags: <a href="https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a>)</div>
   
   
 
@@ -1328,7 +1631,7 @@ If position is specified, the position change does not persist.</p>
       
         <div class='space-bottom0'>
           <div>
-            <span class='code bold'>position</span> <code class='quiet'>((<a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a> | null)
+            <span class='code bold'>position</span> <code class='quiet'>((<a href="https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a> | null)
             = <code>null</code>)</code>
 	    
           </div>
@@ -1337,7 +1640,7 @@ If position is specified, the position change does not persist.</p>
       
         <div class='space-bottom0'>
           <div>
-            <span class='code bold'>extraFlags</span> <code class='quiet'>(<a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a>
+            <span class='code bold'>extraFlags</span> <code class='quiet'>(<a href="https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a>
             = <code>0</code>)</code>
 	    
           </div>
@@ -1351,82 +1654,6 @@ If position is specified, the position change does not persist.</p>
 
   
 
-  
-    <div class='py1 quiet mt1 prose-big'>Throws</div>
-    <ul>
-      
-        <li><a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/TypeError">TypeError</a>: Will throw if not a File INode
-</li>
-      
-    </ul>
-  
-
-  
-
-  
-
-  
-
-  
-</section>
-
-      </div>
-    </div>
-  
-    <div class='border-bottom' id='filedescriptortruncate'>
-      <div class="clearfix small pointer toggle-sibling">
-        <div class="py1 contain">
-            <a class='icon pin-right py1 dark-link caret-right'>▸</a>
-            <span class='code strong strong truncate'>truncate(len)</span>
-        </div>
-      </div>
-      <div class="clearfix display-none toggle-target">
-        <section class='p2 mb2 clearfix bg-white minishadow'>
-
-  
-
-  <p>Truncates this file descriptor.</p>
-
-
-  <div class='pre p1 fill-light mt0'>truncate(len: <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a>)</div>
-  
-  
-
-  
-  
-  
-  
-  
-  
-
-  
-    <div class='py1 quiet mt1 prose-big'>Parameters</div>
-    <div class='prose'>
-      
-        <div class='space-bottom0'>
-          <div>
-            <span class='code bold'>len</span> <code class='quiet'>(<a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a>
-            = <code>0</code>)</code>
-	    
-          </div>
-          
-        </div>
-      
-    </div>
-  
-
-  
-
-  
-
-  
-    <div class='py1 quiet mt1 prose-big'>Throws</div>
-    <ul>
-      
-        <li><a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/TypeError">TypeError</a>: Will throw if not a File INode
-</li>
-      
-    </ul>
   
 
   
@@ -1467,98 +1694,7 @@ If position is specified, the position change does not persist.</p>
   <p>Class that manages all FileDescriptors</p>
 
 
-  <div class='pre p1 fill-light mt0'>new FileDescriptorManager()</div>
-  
-  
-
-  
-  
-  
-  
-  
-  
-
-  
-
-  
-
-  
-
-  
-
-  
-
-  
-
-  
-    <div class='py1 quiet mt1 prose-big'>Instance Members</div>
-    <div class="clearfix">
-  
-    <div class='border-bottom' id='filedescriptormanagerconstructor'>
-      <div class="clearfix small pointer toggle-sibling">
-        <div class="py1 contain">
-            <a class='icon pin-right py1 dark-link caret-right'>▸</a>
-            <span class='code strong strong truncate'>constructor()</span>
-        </div>
-      </div>
-      <div class="clearfix display-none toggle-target">
-        <section class='p2 mb2 clearfix bg-white minishadow'>
-
-  
-
-  <p>Creates an instance of the FileDescriptorManager.
-It starts the fd counter at 0.
-Make sure not get real fd numbers confused with these fd numbers.</p>
-
-
-  <div class='pre p1 fill-light mt0'>constructor()</div>
-  
-  
-
-  
-  
-  
-  
-  
-  
-
-  
-
-  
-
-  
-
-  
-
-  
-
-  
-
-  
-
-  
-</section>
-
-      </div>
-    </div>
-  
-    <div class='border-bottom' id='filedescriptormanagercreatefd'>
-      <div class="clearfix small pointer toggle-sibling">
-        <div class="py1 contain">
-            <a class='icon pin-right py1 dark-link caret-right'>▸</a>
-            <span class='code strong strong truncate'>createFd(inode, flags)</span>
-        </div>
-      </div>
-      <div class="clearfix display-none toggle-target">
-        <section class='p2 mb2 clearfix bg-white minishadow'>
-
-  
-
-  <p>Creates a file descriptor.
-While a file descriptor is opened, the underlying iNode can still be garbage collected by the INodeManager, but it won't be garbage collected by JavaScript runtime.</p>
-
-
-  <div class='pre p1 fill-light mt0'>createFd(inode: $Subtype&#x3C;<a href="#inode">INode</a>>, flags: <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a>): {index: <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a>, fd: <a href="#filedescriptor">FileDescriptor</a>}</div>
+  <div class='pre p1 fill-light mt0'>new FileDescriptorManager(iNodeMgr: <a href="#inodemanager">INodeManager</a>)</div>
   
   
 
@@ -1575,7 +1711,63 @@ While a file descriptor is opened, the underlying iNode can still be garbage col
       
         <div class='space-bottom0'>
           <div>
-            <span class='code bold'>inode</span> <code class='quiet'>($Subtype&#x3C;<a href="#inode">INode</a>>)</code>
+            <span class='code bold'>iNodeMgr</span> <code class='quiet'>(<a href="#inodemanager">INodeManager</a>)</code>
+	    
+          </div>
+          
+        </div>
+      
+    </div>
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+    <div class='py1 quiet mt1 prose-big'>Instance Members</div>
+    <div class="clearfix">
+  
+    <div class='border-bottom' id='filedescriptormanagercreatefd'>
+      <div class="clearfix small pointer toggle-sibling">
+        <div class="py1 contain">
+            <a class='icon pin-right py1 dark-link caret-right'>▸</a>
+            <span class='code strong strong truncate'>createFd(iNode, flags)</span>
+        </div>
+      </div>
+      <div class="clearfix display-none toggle-target">
+        <section class='p2 mb2 clearfix bg-white minishadow'>
+
+  
+
+  <p>Creates a file descriptor.
+This will increment the reference to the iNode preventing garbage collection by the INodeManager.</p>
+
+
+  <div class='pre p1 fill-light mt0'>createFd(iNode: $Subtype&#x3C;<a href="#inode">INode</a>>, flags: <a href="https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a>): [<a href="#filedescriptor">FileDescriptor</a>&#x3C;any>, <a href="https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a>]</div>
+  
+  
+
+  
+  
+  
+  
+  
+  
+
+  
+    <div class='py1 quiet mt1 prose-big'>Parameters</div>
+    <div class='prose'>
+      
+        <div class='space-bottom0'>
+          <div>
+            <span class='code bold'>iNode</span> <code class='quiet'>($Subtype&#x3C;<a href="#inode">INode</a>>)</code>
 	    
           </div>
           
@@ -1583,7 +1775,7 @@ While a file descriptor is opened, the underlying iNode can still be garbage col
       
         <div class='space-bottom0'>
           <div>
-            <span class='code bold'>flags</span> <code class='quiet'>(<a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a>)</code>
+            <span class='code bold'>flags</span> <code class='quiet'>(<a href="https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a>)</code>
 	    
           </div>
           
@@ -1597,7 +1789,7 @@ While a file descriptor is opened, the underlying iNode can still be garbage col
   
     
       <div class='py1 quiet mt1 prose-big'>Returns</div>
-      <code>{index: <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a>, fd: <a href="#filedescriptor">FileDescriptor</a>}</code>
+      <code>[<a href="#filedescriptor">FileDescriptor</a>&#x3C;any>, <a href="https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a>]</code>
     
   
 
@@ -1630,7 +1822,7 @@ While a file descriptor is opened, the underlying iNode can still be garbage col
   <p>Gets the file descriptor object.</p>
 
 
-  <div class='pre p1 fill-light mt0'>getFd(index: <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a>): <a href="#filedescriptor">FileDescriptor</a>?</div>
+  <div class='pre p1 fill-light mt0'>getFd(index: <a href="https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a>): <a href="#filedescriptor">FileDescriptor</a>&#x3C;any>?</div>
   
   
 
@@ -1647,7 +1839,7 @@ While a file descriptor is opened, the underlying iNode can still be garbage col
       
         <div class='space-bottom0'>
           <div>
-            <span class='code bold'>index</span> <code class='quiet'>(<a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a>)</code>
+            <span class='code bold'>index</span> <code class='quiet'>(<a href="https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a>)</code>
 	    
           </div>
           
@@ -1661,7 +1853,72 @@ While a file descriptor is opened, the underlying iNode can still be garbage col
   
     
       <div class='py1 quiet mt1 prose-big'>Returns</div>
-      <code><a href="#filedescriptor">FileDescriptor</a>?</code>
+      <code><a href="#filedescriptor">FileDescriptor</a>&#x3C;any>?</code>
+    
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+</section>
+
+      </div>
+    </div>
+  
+    <div class='border-bottom' id='filedescriptormanagerdupfd'>
+      <div class="clearfix small pointer toggle-sibling">
+        <div class="py1 contain">
+            <a class='icon pin-right py1 dark-link caret-right'>▸</a>
+            <span class='code strong strong truncate'>dupFd(index)</span>
+        </div>
+      </div>
+      <div class="clearfix display-none toggle-target">
+        <section class='p2 mb2 clearfix bg-white minishadow'>
+
+  
+
+  <p>Duplicates file descriptor index.
+It may return a new file descriptor index that points to the same file descriptor.</p>
+
+
+  <div class='pre p1 fill-light mt0'>dupFd(index: <a href="https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a>): <a href="https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a>?</div>
+  
+  
+
+  
+  
+  
+  
+  
+  
+
+  
+    <div class='py1 quiet mt1 prose-big'>Parameters</div>
+    <div class='prose'>
+      
+        <div class='space-bottom0'>
+          <div>
+            <span class='code bold'>index</span> <code class='quiet'>(<a href="https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a>)</code>
+	    
+          </div>
+          
+        </div>
+      
+    </div>
+  
+
+  
+
+  
+    
+      <div class='py1 quiet mt1 prose-big'>Returns</div>
+      <code><a href="https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a>?</code>
     
   
 
@@ -1683,7 +1940,7 @@ While a file descriptor is opened, the underlying iNode can still be garbage col
       <div class="clearfix small pointer toggle-sibling">
         <div class="py1 contain">
             <a class='icon pin-right py1 dark-link caret-right'>▸</a>
-            <span class='code strong strong truncate'>deleteFd(index)</span>
+            <span class='code strong strong truncate'>deleteFd(fdIndex)</span>
         </div>
       </div>
       <div class="clearfix display-none toggle-target">
@@ -1692,10 +1949,11 @@ While a file descriptor is opened, the underlying iNode can still be garbage col
   
 
   <p>Deletes a file descriptor.
-This effectively closes the file descriptor.</p>
+This effectively closes the file descriptor.
+This will decrement the reference to the iNode allowing garbage collection by the INodeManager.</p>
 
 
-  <div class='pre p1 fill-light mt0'>deleteFd(index: <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a>): void</div>
+  <div class='pre p1 fill-light mt0'>deleteFd(fdIndex: <a href="https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a>): void</div>
   
   
 
@@ -1712,7 +1970,7 @@ This effectively closes the file descriptor.</p>
       
         <div class='space-bottom0'>
           <div>
-            <span class='code bold'>index</span> <code class='quiet'>(<a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a>)</code>
+            <span class='code bold'>fdIndex</span> <code class='quiet'>(<a href="https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a>)</code>
 	    
           </div>
           
@@ -1816,7 +2074,7 @@ This effectively closes the file descriptor.</p>
   <p>Class representing an iNode.</p>
 
 
-  <div class='pre p1 fill-light mt0'>new INode(metadata: {ino: <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a>, mode: <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a>, nlink: <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a>?, size: <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a>}, iNodeMgr: <a href="#inodemanager">INodeManager</a>)</div>
+  <div class='pre p1 fill-light mt0'>new INode(metadata: {ino: <a href="https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a>, mode: <a href="https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a>, uid: <a href="https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a>, gid: <a href="https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a>, nlink: <a href="https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a>?, size: <a href="https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a>}, iNodeMgr: <a href="#inodemanager">INodeManager</a>)</div>
   
   
 
@@ -1833,7 +2091,7 @@ This effectively closes the file descriptor.</p>
       
         <div class='space-bottom0'>
           <div>
-            <span class='code bold'>metadata</span> <code class='quiet'>({ino: <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a>, mode: <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a>, nlink: <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a>?, size: <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a>})</code>
+            <span class='code bold'>metadata</span> <code class='quiet'>({ino: <a href="https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a>, mode: <a href="https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a>, uid: <a href="https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a>, gid: <a href="https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a>, nlink: <a href="https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a>?, size: <a href="https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a>})</code>
 	    
           </div>
           
@@ -1863,74 +2121,6 @@ This effectively closes the file descriptor.</p>
   
     <div class='py1 quiet mt1 prose-big'>Instance Members</div>
     <div class="clearfix">
-  
-    <div class='border-bottom' id='inodeconstructor'>
-      <div class="clearfix small pointer toggle-sibling">
-        <div class="py1 contain">
-            <a class='icon pin-right py1 dark-link caret-right'>▸</a>
-            <span class='code strong strong truncate'>constructor(metadata, iNodeMgr)</span>
-        </div>
-      </div>
-      <div class="clearfix display-none toggle-target">
-        <section class='p2 mb2 clearfix bg-white minishadow'>
-
-  
-
-  <p>Creates iNode.
-INode and INodeManager will recursively call each other.</p>
-
-
-  <div class='pre p1 fill-light mt0'>constructor(metadata: {ino: <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a>, mode: <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a>, nlink: <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a>?, size: <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a>}, iNodeMgr: <a href="#inodemanager">INodeManager</a>)</div>
-  
-  
-
-  
-  
-  
-  
-  
-  
-
-  
-    <div class='py1 quiet mt1 prose-big'>Parameters</div>
-    <div class='prose'>
-      
-        <div class='space-bottom0'>
-          <div>
-            <span class='code bold'>metadata</span> <code class='quiet'>({ino: <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a>, mode: <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a>, nlink: <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a>?, size: <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a>})</code>
-	    
-          </div>
-          
-        </div>
-      
-        <div class='space-bottom0'>
-          <div>
-            <span class='code bold'>iNodeMgr</span> <code class='quiet'>(<a href="#inodemanager">INodeManager</a>)</code>
-	    
-          </div>
-          
-        </div>
-      
-    </div>
-  
-
-  
-
-  
-
-  
-
-  
-
-  
-
-  
-
-  
-</section>
-
-      </div>
-    </div>
   
     <div class='border-bottom' id='inodegetmetadata'>
       <div class="clearfix small pointer toggle-sibling">
@@ -2009,7 +2199,7 @@ INode and INodeManager will recursively call each other.</p>
   <p>Class representing a file.</p>
 
 
-  <div class='pre p1 fill-light mt0'>new File(props: {ino: <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a>, data: <a href="https://nodejs.org/api/buffer.html">Buffer</a>}, iNodeMgr: <a href="#inodemanager">INodeManager</a>)</div>
+  <div class='pre p1 fill-light mt0'>new File(props: {ino: <a href="https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a>, mode: <a href="https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a>, uid: <a href="https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a>, gid: <a href="https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a>, data: <a href="https://nodejs.org/api/buffer.html">Buffer</a>?}, iNodeMgr: <a href="#inodemanager">INodeManager</a>)</div>
   
   
     <p>
@@ -2033,7 +2223,7 @@ INode and INodeManager will recursively call each other.</p>
       
         <div class='space-bottom0'>
           <div>
-            <span class='code bold'>props</span> <code class='quiet'>({ino: <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a>, data: <a href="https://nodejs.org/api/buffer.html">Buffer</a>})</code>
+            <span class='code bold'>props</span> <code class='quiet'>({ino: <a href="https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a>, mode: <a href="https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a>, uid: <a href="https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a>, gid: <a href="https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a>, data: <a href="https://nodejs.org/api/buffer.html">Buffer</a>?})</code>
 	    
           </div>
           
@@ -2063,73 +2253,6 @@ INode and INodeManager will recursively call each other.</p>
   
     <div class='py1 quiet mt1 prose-big'>Instance Members</div>
     <div class="clearfix">
-  
-    <div class='border-bottom' id='fileconstructor'>
-      <div class="clearfix small pointer toggle-sibling">
-        <div class="py1 contain">
-            <a class='icon pin-right py1 dark-link caret-right'>▸</a>
-            <span class='code strong strong truncate'>constructor(props, iNodeMgr)</span>
-        </div>
-      </div>
-      <div class="clearfix display-none toggle-target">
-        <section class='p2 mb2 clearfix bg-white minishadow'>
-
-  
-
-  <p>Creates a file.</p>
-
-
-  <div class='pre p1 fill-light mt0'>constructor(props: {ino: <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a>, data: <a href="https://nodejs.org/api/buffer.html">Buffer</a>}, iNodeMgr: <a href="#inodemanager">INodeManager</a>)</div>
-  
-  
-
-  
-  
-  
-  
-  
-  
-
-  
-    <div class='py1 quiet mt1 prose-big'>Parameters</div>
-    <div class='prose'>
-      
-        <div class='space-bottom0'>
-          <div>
-            <span class='code bold'>props</span> <code class='quiet'>({ino: <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a>, data: <a href="https://nodejs.org/api/buffer.html">Buffer</a>})</code>
-	    
-          </div>
-          
-        </div>
-      
-        <div class='space-bottom0'>
-          <div>
-            <span class='code bold'>iNodeMgr</span> <code class='quiet'>(<a href="#inodemanager">INodeManager</a>)</code>
-	    
-          </div>
-          
-        </div>
-      
-    </div>
-  
-
-  
-
-  
-
-  
-
-  
-
-  
-
-  
-
-  
-</section>
-
-      </div>
-    </div>
   
     <div class='border-bottom' id='filegetdata'>
       <div class="clearfix small pointer toggle-sibling">
@@ -2323,7 +2446,7 @@ INode and INodeManager will recursively call each other.</p>
   <p>Class representing a directory.</p>
 
 
-  <div class='pre p1 fill-light mt0'>new Directory(props: {ino: <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a>, parent: <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a>?}, iNodeMgr: <a href="#inodemanager">INodeManager</a>)</div>
+  <div class='pre p1 fill-light mt0'>new Directory(props: {ino: <a href="https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a>, mode: <a href="https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a>, uid: <a href="https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a>, gid: <a href="https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a>, parent: <a href="https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a>?}, iNodeMgr: <a href="#inodemanager">INodeManager</a>)</div>
   
   
     <p>
@@ -2347,7 +2470,7 @@ INode and INodeManager will recursively call each other.</p>
       
         <div class='space-bottom0'>
           <div>
-            <span class='code bold'>props</span> <code class='quiet'>({ino: <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a>, parent: <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a>?})</code>
+            <span class='code bold'>props</span> <code class='quiet'>({ino: <a href="https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a>, mode: <a href="https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a>, uid: <a href="https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a>, gid: <a href="https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a>, parent: <a href="https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a>?})</code>
 	    
           </div>
           
@@ -2378,75 +2501,6 @@ INode and INodeManager will recursively call each other.</p>
     <div class='py1 quiet mt1 prose-big'>Instance Members</div>
     <div class="clearfix">
   
-    <div class='border-bottom' id='directoryconstructor'>
-      <div class="clearfix small pointer toggle-sibling">
-        <div class="py1 contain">
-            <a class='icon pin-right py1 dark-link caret-right'>▸</a>
-            <span class='code strong strong truncate'>constructor(props, iNodeMgr)</span>
-        </div>
-      </div>
-      <div class="clearfix display-none toggle-target">
-        <section class='p2 mb2 clearfix bg-white minishadow'>
-
-  
-
-  <p>Creates a directory.
-Virtual directories have 0 size.
-If there's no parent inode, we assume this is the root directory.</p>
-
-
-  <div class='pre p1 fill-light mt0'>constructor(props: {ino: <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a>, parent: <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a>?}, iNodeMgr: <a href="#inodemanager">INodeManager</a>)</div>
-  
-  
-
-  
-  
-  
-  
-  
-  
-
-  
-    <div class='py1 quiet mt1 prose-big'>Parameters</div>
-    <div class='prose'>
-      
-        <div class='space-bottom0'>
-          <div>
-            <span class='code bold'>props</span> <code class='quiet'>({ino: <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a>, parent: <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a>?})</code>
-	    
-          </div>
-          
-        </div>
-      
-        <div class='space-bottom0'>
-          <div>
-            <span class='code bold'>iNodeMgr</span> <code class='quiet'>(<a href="#inodemanager">INodeManager</a>)</code>
-	    
-          </div>
-          
-        </div>
-      
-    </div>
-  
-
-  
-
-  
-
-  
-
-  
-
-  
-
-  
-
-  
-</section>
-
-      </div>
-    </div>
-  
     <div class='border-bottom' id='directorygetentries'>
       <div class="clearfix small pointer toggle-sibling">
         <div class="py1 contain">
@@ -2459,10 +2513,11 @@ If there's no parent inode, we assume this is the root directory.</p>
 
   
 
-  <p>Gets all the names.</p>
+  <p>Gets an iterator of name to iNode index.
+This prevents giving out mutability.</p>
 
 
-  <div class='pre p1 fill-light mt0'>getEntries(): <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Map">Map</a>&#x3C;any, any></div>
+  <div class='pre p1 fill-light mt0'>getEntries(): Iterator&#x3C;[<a href="https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/String">string</a>, <a href="https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a>]></div>
   
   
 
@@ -2480,7 +2535,7 @@ If there's no parent inode, we assume this is the root directory.</p>
   
     
       <div class='py1 quiet mt1 prose-big'>Returns</div>
-      <code><a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Map">Map</a>&#x3C;any, any></code>
+      <code>Iterator&#x3C;[<a href="https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/String">string</a>, <a href="https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a>]></code>
     
   
 
@@ -2513,7 +2568,7 @@ If there's no parent inode, we assume this is the root directory.</p>
   <p>Get the inode index for a name.</p>
 
 
-  <div class='pre p1 fill-light mt0'>getEntryIndex(name: <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String">string</a>): <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a>?</div>
+  <div class='pre p1 fill-light mt0'>getEntryIndex(name: <a href="https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/String">string</a>): <a href="https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a>?</div>
   
   
 
@@ -2530,7 +2585,7 @@ If there's no parent inode, we assume this is the root directory.</p>
       
         <div class='space-bottom0'>
           <div>
-            <span class='code bold'>name</span> <code class='quiet'>(<a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String">string</a>)</code>
+            <span class='code bold'>name</span> <code class='quiet'>(<a href="https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/String">string</a>)</code>
 	    
           </div>
           
@@ -2544,7 +2599,7 @@ If there's no parent inode, we assume this is the root directory.</p>
   
     
       <div class='py1 quiet mt1 prose-big'>Returns</div>
-      <code><a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a>?</code>
+      <code><a href="https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a>?</code>
     
   
 
@@ -2577,7 +2632,7 @@ If there's no parent inode, we assume this is the root directory.</p>
   <p>Get inode for a name.</p>
 
 
-  <div class='pre p1 fill-light mt0'>getEntry(name: <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String">string</a>): ($Subtype&#x3C;<a href="#inode">INode</a>> | void)</div>
+  <div class='pre p1 fill-light mt0'>getEntry(name: <a href="https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/String">string</a>): ($Subtype&#x3C;<a href="#inode">INode</a>> | void)</div>
   
   
 
@@ -2594,7 +2649,7 @@ If there's no parent inode, we assume this is the root directory.</p>
       
         <div class='space-bottom0'>
           <div>
-            <span class='code bold'>name</span> <code class='quiet'>(<a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String">string</a>)</code>
+            <span class='code bold'>name</span> <code class='quiet'>(<a href="https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/String">string</a>)</code>
 	    
           </div>
           
@@ -2639,10 +2694,11 @@ If there's no parent inode, we assume this is the root directory.</p>
   
 
   <p>Add a name to inode index to this directory.
-It will increment the link reference to the inode.</p>
+It will increment the link reference to the inode.
+It is not allowed to add entries with the names <code>.</code> and <code>..</code>.</p>
 
 
-  <div class='pre p1 fill-light mt0'>addEntry(name: <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String">string</a>, index: <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a>)</div>
+  <div class='pre p1 fill-light mt0'>addEntry(name: <a href="https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/String">string</a>, index: <a href="https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a>)</div>
   
   
 
@@ -2659,7 +2715,7 @@ It will increment the link reference to the inode.</p>
       
         <div class='space-bottom0'>
           <div>
-            <span class='code bold'>name</span> <code class='quiet'>(<a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String">string</a>)</code>
+            <span class='code bold'>name</span> <code class='quiet'>(<a href="https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/String">string</a>)</code>
 	    
           </div>
           
@@ -2667,7 +2723,7 @@ It will increment the link reference to the inode.</p>
       
         <div class='space-bottom0'>
           <div>
-            <span class='code bold'>index</span> <code class='quiet'>(<a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a>)</code>
+            <span class='code bold'>index</span> <code class='quiet'>(<a href="https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a>)</code>
 	    
           </div>
           
@@ -2707,10 +2763,11 @@ It will increment the link reference to the inode.</p>
   
 
   <p>Delete a name in this directory.
-It will decrement the link reference to the inode.</p>
+It will decrement the link reference to the inode.
+It is not allowed to delete entries with the names <code>.</code> and <code>..</code>.</p>
 
 
-  <div class='pre p1 fill-light mt0'>deleteEntry(name: <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String">string</a>): void</div>
+  <div class='pre p1 fill-light mt0'>deleteEntry(name: <a href="https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/String">string</a>): void</div>
   
   
 
@@ -2727,7 +2784,7 @@ It will decrement the link reference to the inode.</p>
       
         <div class='space-bottom0'>
           <div>
-            <span class='code bold'>name</span> <code class='quiet'>(<a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String">string</a>)</code>
+            <span class='code bold'>name</span> <code class='quiet'>(<a href="https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/String">string</a>)</code>
 	    
           </div>
           
@@ -2774,7 +2831,7 @@ It will decrement the link reference to the inode.</p>
   <p>Rename a name in this directory.</p>
 
 
-  <div class='pre p1 fill-light mt0'>renameEntry(oldName: <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String">string</a>, newName: <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String">string</a>): void</div>
+  <div class='pre p1 fill-light mt0'>renameEntry(oldName: <a href="https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/String">string</a>, newName: <a href="https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/String">string</a>): void</div>
   
   
 
@@ -2791,7 +2848,7 @@ It will decrement the link reference to the inode.</p>
       
         <div class='space-bottom0'>
           <div>
-            <span class='code bold'>oldName</span> <code class='quiet'>(<a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String">string</a>)</code>
+            <span class='code bold'>oldName</span> <code class='quiet'>(<a href="https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/String">string</a>)</code>
 	    
           </div>
           
@@ -2799,7 +2856,7 @@ It will decrement the link reference to the inode.</p>
       
         <div class='space-bottom0'>
           <div>
-            <span class='code bold'>newName</span> <code class='quiet'>(<a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String">string</a>)</code>
+            <span class='code bold'>newName</span> <code class='quiet'>(<a href="https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/String">string</a>)</code>
 	    
           </div>
           
@@ -2843,7 +2900,9 @@ It will decrement the link reference to the inode.</p>
 
   
 
-  <p>This is to be called by the INodeManager all hardlinks to this directory reduce to 0.</p>
+  <p>This is to be called when all hardlinks and references to this directory reduce to 0.
+The destructor here is about unlinking the parent directory.
+Because the <code>..</code> will no longer exist.</p>
 
 
   <div class='pre p1 fill-light mt0'>destructor(): void</div>
@@ -2908,7 +2967,7 @@ It will decrement the link reference to the inode.</p>
   <p>Class representing a Symlink.</p>
 
 
-  <div class='pre p1 fill-light mt0'>new Symlink(props: {ino: <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a>, link: <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String">string</a>}, iNodeMgr: <a href="#inodemanager">INodeManager</a>)</div>
+  <div class='pre p1 fill-light mt0'>new Symlink(props: {ino: <a href="https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a>, mode: <a href="https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a>, uid: <a href="https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a>, gid: <a href="https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a>, link: <a href="https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/String">string</a>}, iNodeMgr: <a href="#inodemanager">INodeManager</a>)</div>
   
   
     <p>
@@ -2932,7 +2991,7 @@ It will decrement the link reference to the inode.</p>
       
         <div class='space-bottom0'>
           <div>
-            <span class='code bold'>props</span> <code class='quiet'>({ino: <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a>, link: <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String">string</a>})</code>
+            <span class='code bold'>props</span> <code class='quiet'>({ino: <a href="https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a>, mode: <a href="https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a>, uid: <a href="https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a>, gid: <a href="https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a>, link: <a href="https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/String">string</a>})</code>
 	    
           </div>
           
@@ -2963,73 +3022,6 @@ It will decrement the link reference to the inode.</p>
     <div class='py1 quiet mt1 prose-big'>Instance Members</div>
     <div class="clearfix">
   
-    <div class='border-bottom' id='symlinkconstructor'>
-      <div class="clearfix small pointer toggle-sibling">
-        <div class="py1 contain">
-            <a class='icon pin-right py1 dark-link caret-right'>▸</a>
-            <span class='code strong strong truncate'>constructor(props, iNodeMgr)</span>
-        </div>
-      </div>
-      <div class="clearfix display-none toggle-target">
-        <section class='p2 mb2 clearfix bg-white minishadow'>
-
-  
-
-  <p>Creates a symlink.</p>
-
-
-  <div class='pre p1 fill-light mt0'>constructor(props: {ino: <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a>, link: <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String">string</a>}, iNodeMgr: <a href="#inodemanager">INodeManager</a>)</div>
-  
-  
-
-  
-  
-  
-  
-  
-  
-
-  
-    <div class='py1 quiet mt1 prose-big'>Parameters</div>
-    <div class='prose'>
-      
-        <div class='space-bottom0'>
-          <div>
-            <span class='code bold'>props</span> <code class='quiet'>({ino: <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a>, link: <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String">string</a>})</code>
-	    
-          </div>
-          
-        </div>
-      
-        <div class='space-bottom0'>
-          <div>
-            <span class='code bold'>iNodeMgr</span> <code class='quiet'>(<a href="#inodemanager">INodeManager</a>)</code>
-	    
-          </div>
-          
-        </div>
-      
-    </div>
-  
-
-  
-
-  
-
-  
-
-  
-
-  
-
-  
-
-  
-</section>
-
-      </div>
-    </div>
-  
     <div class='border-bottom' id='symlinkgetlink'>
       <div class="clearfix small pointer toggle-sibling">
         <div class="py1 contain">
@@ -3045,7 +3037,7 @@ It will decrement the link reference to the inode.</p>
   <p>Gets the link string.</p>
 
 
-  <div class='pre p1 fill-light mt0'>getLink(): <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String">string</a></div>
+  <div class='pre p1 fill-light mt0'>getLink(): <a href="https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/String">string</a></div>
   
   
 
@@ -3063,7 +3055,7 @@ It will decrement the link reference to the inode.</p>
   
     
       <div class='py1 quiet mt1 prose-big'>Returns</div>
-      <code><a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String">string</a></code>
+      <code><a href="https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/String">string</a></code>
     
   
 
@@ -3147,71 +3139,56 @@ It will decrement the link reference to the inode.</p>
   
   <div class='clearfix'>
     
-    <h3 class='fl m0' id='inodemanager'>
-      INodeManager
+    <h3 class='fl m0' id='characterdev'>
+      CharacterDev
     </h3>
     
     
   </div>
   
 
-  <p>Class that manages all iNodes including creation and deletion</p>
+  <p>Class representing a character device.</p>
 
 
-  <div class='pre p1 fill-light mt0'>new INodeManager()</div>
+  <div class='pre p1 fill-light mt0'>new CharacterDev(props: {ino: <a href="https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a>, mode: <a href="https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a>, uid: <a href="https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a>, gid: <a href="https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a>, rdev: <a href="https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a>}, iNodeMgr: <a href="#inodemanager">INodeManager</a>)</div>
   
   
-
-  
-  
-  
-  
-  
-  
-
+    <p>
+      Extends
+      
+        <a href="#inode">INode</a>
+      
+    </p>
   
 
   
-
+  
+  
+  
+  
   
 
   
-
-  
-
-  
-
-  
-    <div class='py1 quiet mt1 prose-big'>Instance Members</div>
-    <div class="clearfix">
-  
-    <div class='border-bottom' id='inodemanagerconstructor'>
-      <div class="clearfix small pointer toggle-sibling">
-        <div class="py1 contain">
-            <a class='icon pin-right py1 dark-link caret-right'>▸</a>
-            <span class='code strong strong truncate'>constructor()</span>
+    <div class='py1 quiet mt1 prose-big'>Parameters</div>
+    <div class='prose'>
+      
+        <div class='space-bottom0'>
+          <div>
+            <span class='code bold'>props</span> <code class='quiet'>({ino: <a href="https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a>, mode: <a href="https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a>, uid: <a href="https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a>, gid: <a href="https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a>, rdev: <a href="https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a>})</code>
+	    
+          </div>
+          
         </div>
-      </div>
-      <div class="clearfix display-none toggle-target">
-        <section class='p2 mb2 clearfix bg-white minishadow'>
-
-  
-
-  <p>Creates an instance of the INodeManager.
-It starts the inode counter at 1, as 0 is usually reserved in posix filesystems.</p>
-
-
-  <div class='pre p1 fill-light mt0'>constructor()</div>
-  
-  
-
-  
-  
-  
-  
-  
-  
-
+      
+        <div class='space-bottom0'>
+          <div>
+            <span class='code bold'>iNodeMgr</span> <code class='quiet'>(<a href="#inodemanager">INodeManager</a>)</code>
+	    
+          </div>
+          
+        </div>
+      
+    </div>
   
 
   
@@ -3229,8 +3206,64 @@ It starts the inode counter at 1, as 0 is usually reserved in posix filesystems.
   
 </section>
 
-      </div>
+          
+        
+          
+            <section class='p2 mb2 clearfix bg-white minishadow'>
+
+  
+  <div class='clearfix'>
+    
+    <h3 class='fl m0' id='inodemanager'>
+      INodeManager
+    </h3>
+    
+    
+  </div>
+  
+
+  <p>Class that manages all iNodes including creation and deletion</p>
+
+
+  <div class='pre p1 fill-light mt0'>new INodeManager(devMgr: DeviceManager)</div>
+  
+  
+
+  
+  
+  
+  
+  
+  
+
+  
+    <div class='py1 quiet mt1 prose-big'>Parameters</div>
+    <div class='prose'>
+      
+        <div class='space-bottom0'>
+          <div>
+            <span class='code bold'>devMgr</span> <code class='quiet'>(DeviceManager)</code>
+	    
+          </div>
+          
+        </div>
+      
     </div>
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+    <div class='py1 quiet mt1 prose-big'>Instance Members</div>
+    <div class="clearfix">
   
     <div class='border-bottom' id='inodemanagercreateinode'>
       <div class="clearfix small pointer toggle-sibling">
@@ -3245,10 +3278,10 @@ It starts the inode counter at 1, as 0 is usually reserved in posix filesystems.
   
 
   <p>Creates an inode, from a INode constructor function.
-The returned inode index must be added as an entry into a directory.</p>
+The returned inode must be used and later manually deallocated.</p>
 
 
-  <div class='pre p1 fill-light mt0'>createINode(iNodeConstructor: Class&#x3C;<a href="#inode">INode</a>>, props: <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object">Object</a>): <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a></div>
+  <div class='pre p1 fill-light mt0'>createINode(iNodeConstructor: Class&#x3C;<a href="#inode">INode</a>>, props: <a href="https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Object">Object</a>): [$Subtype&#x3C;<a href="#inode">INode</a>>, <a href="https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a>]</div>
   
   
 
@@ -3273,7 +3306,8 @@ The returned inode index must be added as an entry into a directory.</p>
       
         <div class='space-bottom0'>
           <div>
-            <span class='code bold'>props</span> <code class='quiet'>(<a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object">Object</a>)</code>
+            <span class='code bold'>props</span> <code class='quiet'>(<a href="https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Object">Object</a>
+            = <code>{}</code>)</code>
 	    
           </div>
           
@@ -3287,7 +3321,7 @@ The returned inode index must be added as an entry into a directory.</p>
   
     
       <div class='py1 quiet mt1 prose-big'>Returns</div>
-      <code><a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a></code>
+      <code>[$Subtype&#x3C;<a href="#inode">INode</a>>, <a href="https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a>]</code>
     
   
 
@@ -3320,7 +3354,7 @@ The returned inode index must be added as an entry into a directory.</p>
   <p>Gets the inode.</p>
 
 
-  <div class='pre p1 fill-light mt0'>getINode(index: <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a>): (<a href="#file">File</a> | <a href="#directory">Directory</a> | <a href="#symlink">Symlink</a> | void)</div>
+  <div class='pre p1 fill-light mt0'>getINode(index: <a href="https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a>): ($Subtype&#x3C;<a href="#inode">INode</a>> | void)</div>
   
   
 
@@ -3337,7 +3371,7 @@ The returned inode index must be added as an entry into a directory.</p>
       
         <div class='space-bottom0'>
           <div>
-            <span class='code bold'>index</span> <code class='quiet'>(<a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a>)</code>
+            <span class='code bold'>index</span> <code class='quiet'>(<a href="https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a>)</code>
 	    
           </div>
           
@@ -3351,7 +3385,7 @@ The returned inode index must be added as an entry into a directory.</p>
   
     
       <div class='py1 quiet mt1 prose-big'>Returns</div>
-      <code>(<a href="#file">File</a> | <a href="#directory">Directory</a> | <a href="#symlink">Symlink</a> | void)</code>
+      <code>($Subtype&#x3C;<a href="#inode">INode</a>> | void)</code>
     
   
 
@@ -3373,7 +3407,7 @@ The returned inode index must be added as an entry into a directory.</p>
       <div class="clearfix small pointer toggle-sibling">
         <div class="py1 contain">
             <a class='icon pin-right py1 dark-link caret-right'>▸</a>
-            <span class='code strong strong truncate'>linkINode(index)</span>
+            <span class='code strong strong truncate'>linkINode(iNode)</span>
         </div>
       </div>
       <div class="clearfix display-none toggle-target">
@@ -3384,7 +3418,7 @@ The returned inode index must be added as an entry into a directory.</p>
   <p>Links an inode, this increments the hardlink reference count.</p>
 
 
-  <div class='pre p1 fill-light mt0'>linkINode(index: <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a>): void</div>
+  <div class='pre p1 fill-light mt0'>linkINode(iNode: $Subtype&#x3C;<a href="#inode">INode</a>>?): void</div>
   
   
 
@@ -3401,7 +3435,7 @@ The returned inode index must be added as an entry into a directory.</p>
       
         <div class='space-bottom0'>
           <div>
-            <span class='code bold'>index</span> <code class='quiet'>(<a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a>)</code>
+            <span class='code bold'>iNode</span> <code class='quiet'>($Subtype&#x3C;<a href="#inode">INode</a>>?)</code>
 	    
           </div>
           
@@ -3437,7 +3471,7 @@ The returned inode index must be added as an entry into a directory.</p>
       <div class="clearfix small pointer toggle-sibling">
         <div class="py1 contain">
             <a class='icon pin-right py1 dark-link caret-right'>▸</a>
-            <span class='code strong strong truncate'>unlinkINode(index)</span>
+            <span class='code strong strong truncate'>unlinkINode(iNode)</span>
         </div>
       </div>
       <div class="clearfix display-none toggle-target">
@@ -3445,11 +3479,10 @@ The returned inode index must be added as an entry into a directory.</p>
 
   
 
-  <p>Unlinks an inode, this decrements the hardlink reference count.
-If the hardlink reference count reaches 0, the inode is garbage collected.</p>
+  <p>Unlinks an inode, this decrements the hardlink reference count.</p>
 
 
-  <div class='pre p1 fill-light mt0'>unlinkINode(index: <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a>): void</div>
+  <div class='pre p1 fill-light mt0'>unlinkINode(iNode: $Subtype&#x3C;<a href="#inode">INode</a>>?): void</div>
   
   
 
@@ -3466,7 +3499,205 @@ If the hardlink reference count reaches 0, the inode is garbage collected.</p>
       
         <div class='space-bottom0'>
           <div>
-            <span class='code bold'>index</span> <code class='quiet'>(<a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a>)</code>
+            <span class='code bold'>iNode</span> <code class='quiet'>($Subtype&#x3C;<a href="#inode">INode</a>>?)</code>
+	    
+          </div>
+          
+        </div>
+      
+    </div>
+  
+
+  
+
+  
+    
+      <div class='py1 quiet mt1 prose-big'>Returns</div>
+      <code>void</code>
+    
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+</section>
+
+      </div>
+    </div>
+  
+    <div class='border-bottom' id='inodemanagerrefinode'>
+      <div class="clearfix small pointer toggle-sibling">
+        <div class="py1 contain">
+            <a class='icon pin-right py1 dark-link caret-right'>▸</a>
+            <span class='code strong strong truncate'>refINode(iNode)</span>
+        </div>
+      </div>
+      <div class="clearfix display-none toggle-target">
+        <section class='p2 mb2 clearfix bg-white minishadow'>
+
+  
+
+  <p>References an inode, this increments the private reference count.
+Private reference count can be used by file descriptors and working directory position.</p>
+
+
+  <div class='pre p1 fill-light mt0'>refINode(iNode: $Subtype&#x3C;<a href="#inode">INode</a>>?): void</div>
+  
+  
+
+  
+  
+  
+  
+  
+  
+
+  
+    <div class='py1 quiet mt1 prose-big'>Parameters</div>
+    <div class='prose'>
+      
+        <div class='space-bottom0'>
+          <div>
+            <span class='code bold'>iNode</span> <code class='quiet'>($Subtype&#x3C;<a href="#inode">INode</a>>?)</code>
+	    
+          </div>
+          
+        </div>
+      
+    </div>
+  
+
+  
+
+  
+    
+      <div class='py1 quiet mt1 prose-big'>Returns</div>
+      <code>void</code>
+    
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+</section>
+
+      </div>
+    </div>
+  
+    <div class='border-bottom' id='inodemanagerunrefinode'>
+      <div class="clearfix small pointer toggle-sibling">
+        <div class="py1 contain">
+            <a class='icon pin-right py1 dark-link caret-right'>▸</a>
+            <span class='code strong strong truncate'>unrefINode(iNode)</span>
+        </div>
+      </div>
+      <div class="clearfix display-none toggle-target">
+        <section class='p2 mb2 clearfix bg-white minishadow'>
+
+  
+
+  <p>Unreferences an inode, this decrements the private reference count.</p>
+
+
+  <div class='pre p1 fill-light mt0'>unrefINode(iNode: $Subtype&#x3C;<a href="#inode">INode</a>>?): void</div>
+  
+  
+
+  
+  
+  
+  
+  
+  
+
+  
+    <div class='py1 quiet mt1 prose-big'>Parameters</div>
+    <div class='prose'>
+      
+        <div class='space-bottom0'>
+          <div>
+            <span class='code bold'>iNode</span> <code class='quiet'>($Subtype&#x3C;<a href="#inode">INode</a>>?)</code>
+	    
+          </div>
+          
+        </div>
+      
+    </div>
+  
+
+  
+
+  
+    
+      <div class='py1 quiet mt1 prose-big'>Returns</div>
+      <code>void</code>
+    
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+</section>
+
+      </div>
+    </div>
+  
+    <div class='border-bottom' id='inodemanager_gcinode'>
+      <div class="clearfix small pointer toggle-sibling">
+        <div class="py1 contain">
+            <a class='icon pin-right py1 dark-link caret-right'>▸</a>
+            <span class='code strong strong truncate'>_gcINode(iNode)</span>
+        </div>
+      </div>
+      <div class="clearfix display-none toggle-target">
+        <section class='p2 mb2 clearfix bg-white minishadow'>
+
+  
+
+  <p>Decides whether to garbage collect the inode.
+The true usage count is the hardlink count plus the private reference count.
+Usually if the true usage count is 0, then the inode is garbage collected.
+However directories are special cased here, due to the <code>.</code> circular hardlink.
+This allows directories to be garbage collected even when their usage count is 1.
+This is possible also because there cannot be custom hardlinks to directories.</p>
+
+
+  <div class='pre p1 fill-light mt0'>_gcINode(iNode: $Subtype&#x3C;<a href="#inode">INode</a>>): void</div>
+  
+  
+
+  
+  
+  
+  
+  
+  
+
+  
+    <div class='py1 quiet mt1 prose-big'>Parameters</div>
+    <div class='prose'>
+      
+        <div class='space-bottom0'>
+          <div>
+            <span class='code bold'>iNode</span> <code class='quiet'>($Subtype&#x3C;<a href="#inode">INode</a>>)</code>
 	    
           </div>
           
@@ -3499,6 +3730,591 @@ If the hardlink reference count reaches 0, the inode is garbage collected.</p>
     </div>
   
 </div>
+
+  
+
+  
+</section>
+
+          
+        
+          
+            <section class='p2 mb2 clearfix bg-white minishadow'>
+
+  
+  <div class='clearfix'>
+    
+    <h3 class='fl m0' id='permissions'>
+      Permissions
+    </h3>
+    
+    
+  </div>
+  
+
+  
+
+  <div class='pre p1 fill-light mt0'>Permissions</div>
+  
+  
+
+  
+  
+  
+  
+  
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+</section>
+
+          
+        
+          
+            <section class='p2 mb2 clearfix bg-white minishadow'>
+
+  
+  <div class='clearfix'>
+    
+    <h3 class='fl m0' id='default_root_uid'>
+      DEFAULT_ROOT_UID
+    </h3>
+    
+    
+  </div>
+  
+
+  <p>Default root uid.</p>
+
+
+  <div class='pre p1 fill-light mt0'>DEFAULT_ROOT_UID</div>
+  
+    <p>
+      Type:
+      <a href="https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a>
+    </p>
+  
+  
+
+  
+  
+  
+  
+  
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+</section>
+
+          
+        
+          
+            <section class='p2 mb2 clearfix bg-white minishadow'>
+
+  
+  <div class='clearfix'>
+    
+    <h3 class='fl m0' id='default_root_gid'>
+      DEFAULT_ROOT_GID
+    </h3>
+    
+    
+  </div>
+  
+
+  <p>Default root gid.</p>
+
+
+  <div class='pre p1 fill-light mt0'>DEFAULT_ROOT_GID</div>
+  
+    <p>
+      Type:
+      <a href="https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a>
+    </p>
+  
+  
+
+  
+  
+  
+  
+  
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+</section>
+
+          
+        
+          
+            <section class='p2 mb2 clearfix bg-white minishadow'>
+
+  
+  <div class='clearfix'>
+    
+    <h3 class='fl m0' id='default_root_perm'>
+      DEFAULT_ROOT_PERM
+    </h3>
+    
+    
+  </div>
+  
+
+  <p>Default root directory permissions of <code>rwxr-xr-x</code>.</p>
+
+
+  <div class='pre p1 fill-light mt0'>DEFAULT_ROOT_PERM</div>
+  
+  
+
+  
+  
+  
+  
+  
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+</section>
+
+          
+        
+          
+            <section class='p2 mb2 clearfix bg-white minishadow'>
+
+  
+  <div class='clearfix'>
+    
+    <h3 class='fl m0' id='default_file_perm'>
+      DEFAULT_FILE_PERM
+    </h3>
+    
+    
+  </div>
+  
+
+  <p>Default file permissions of <code>rw-rw-rw-</code>.</p>
+
+
+  <div class='pre p1 fill-light mt0'>DEFAULT_FILE_PERM</div>
+  
+  
+
+  
+  
+  
+  
+  
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+</section>
+
+          
+        
+          
+            <section class='p2 mb2 clearfix bg-white minishadow'>
+
+  
+  <div class='clearfix'>
+    
+    <h3 class='fl m0' id='default_directory_perm'>
+      DEFAULT_DIRECTORY_PERM
+    </h3>
+    
+    
+  </div>
+  
+
+  <p>Default directory permissions of <code>rwxrwxrwx</code>.</p>
+
+
+  <div class='pre p1 fill-light mt0'>DEFAULT_DIRECTORY_PERM</div>
+  
+  
+
+  
+  
+  
+  
+  
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+</section>
+
+          
+        
+          
+            <section class='p2 mb2 clearfix bg-white minishadow'>
+
+  
+  <div class='clearfix'>
+    
+    <h3 class='fl m0' id='default_symlink_perm'>
+      DEFAULT_SYMLINK_PERM
+    </h3>
+    
+    
+  </div>
+  
+
+  <p>Default symlink permissions of <code>rwxrwxrwx</code>.</p>
+
+
+  <div class='pre p1 fill-light mt0'>DEFAULT_SYMLINK_PERM</div>
+  
+  
+
+  
+  
+  
+  
+  
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+</section>
+
+          
+        
+          
+            <section class='p2 mb2 clearfix bg-white minishadow'>
+
+  
+  <div class='clearfix'>
+    
+    <h3 class='fl m0' id='applyumask'>
+      applyUmask
+    </h3>
+    
+    
+  </div>
+  
+
+  <p>Applies umask to default set of permissions.</p>
+
+
+  <div class='pre p1 fill-light mt0'>applyUmask(perms: <a href="https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a>, umask: <a href="https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a>): <a href="https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a></div>
+  
+  
+
+  
+  
+  
+  
+  
+  
+
+  
+    <div class='py1 quiet mt1 prose-big'>Parameters</div>
+    <div class='prose'>
+      
+        <div class='space-bottom0'>
+          <div>
+            <span class='code bold'>perms</span> <code class='quiet'>(<a href="https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a>)</code>
+	    
+          </div>
+          
+        </div>
+      
+        <div class='space-bottom0'>
+          <div>
+            <span class='code bold'>umask</span> <code class='quiet'>(<a href="https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a>)</code>
+	    
+          </div>
+          
+        </div>
+      
+    </div>
+  
+
+  
+
+  
+    
+      <div class='py1 quiet mt1 prose-big'>Returns</div>
+      <code><a href="https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a></code>
+    
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+</section>
+
+          
+        
+          
+            <section class='p2 mb2 clearfix bg-white minishadow'>
+
+  
+  <div class='clearfix'>
+    
+    <h3 class='fl m0' id='resolveownership'>
+      resolveOwnership
+    </h3>
+    
+    
+  </div>
+  
+
+  <p>Permission checking relies on ownership details of the iNode.
+If the accessing user is the same as the iNode user, then only user permissions are used.
+If the accessing group is the same as the iNode group, then only the group permissions are used.
+Otherwise the other permissions are used.</p>
+
+
+  <div class='pre p1 fill-light mt0'>resolveOwnership(uid: <a href="https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a>, gid: <a href="https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a>, stat: <a href="#stat">Stat</a>): <a href="https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a></div>
+  
+  
+
+  
+  
+  
+  
+  
+  
+
+  
+    <div class='py1 quiet mt1 prose-big'>Parameters</div>
+    <div class='prose'>
+      
+        <div class='space-bottom0'>
+          <div>
+            <span class='code bold'>uid</span> <code class='quiet'>(<a href="https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a>)</code>
+	    
+          </div>
+          
+        </div>
+      
+        <div class='space-bottom0'>
+          <div>
+            <span class='code bold'>gid</span> <code class='quiet'>(<a href="https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a>)</code>
+	    
+          </div>
+          
+        </div>
+      
+        <div class='space-bottom0'>
+          <div>
+            <span class='code bold'>stat</span> <code class='quiet'>(<a href="#stat">Stat</a>)</code>
+	    
+          </div>
+          
+        </div>
+      
+    </div>
+  
+
+  
+
+  
+    
+      <div class='py1 quiet mt1 prose-big'>Returns</div>
+      <code><a href="https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a></code>
+    
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+</section>
+
+          
+        
+          
+            <section class='p2 mb2 clearfix bg-white minishadow'>
+
+  
+  <div class='clearfix'>
+    
+    <h3 class='fl m0' id='checkpermissions'>
+      checkPermissions
+    </h3>
+    
+    
+  </div>
+  
+
+  <p>Checks the desired permissions with user id and group id against the metadata of an iNode.
+The desired permissions can be bitwise combinations of constants.R_OK, constants.W_OK and constants.X_OK.</p>
+
+
+  <div class='pre p1 fill-light mt0'>checkPermissions(access: <a href="https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a>, uid: <a href="https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a>, gid: <a href="https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a>, stat: <a href="#stat">Stat</a>): <a href="https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Boolean">boolean</a></div>
+  
+  
+
+  
+  
+  
+  
+  
+  
+
+  
+    <div class='py1 quiet mt1 prose-big'>Parameters</div>
+    <div class='prose'>
+      
+        <div class='space-bottom0'>
+          <div>
+            <span class='code bold'>access</span> <code class='quiet'>(<a href="https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a>)</code>
+	    
+          </div>
+          
+        </div>
+      
+        <div class='space-bottom0'>
+          <div>
+            <span class='code bold'>uid</span> <code class='quiet'>(<a href="https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a>)</code>
+	    
+          </div>
+          
+        </div>
+      
+        <div class='space-bottom0'>
+          <div>
+            <span class='code bold'>gid</span> <code class='quiet'>(<a href="https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a>)</code>
+	    
+          </div>
+          
+        </div>
+      
+        <div class='space-bottom0'>
+          <div>
+            <span class='code bold'>stat</span> <code class='quiet'>(<a href="#stat">Stat</a>)</code>
+	    
+          </div>
+          
+        </div>
+      
+    </div>
+  
+
+  
+
+  
+    
+      <div class='py1 quiet mt1 prose-big'>Returns</div>
+      <code><a href="https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Boolean">boolean</a></code>
+    
+  
+
+  
+
+  
+
+  
 
   
 
@@ -3550,65 +4366,6 @@ If the hardlink reference count reaches 0, the inode is garbage collected.</p>
     <div class='py1 quiet mt1 prose-big'>Instance Members</div>
     <div class="clearfix">
   
-    <div class='border-bottom' id='statconstructor'>
-      <div class="clearfix small pointer toggle-sibling">
-        <div class="py1 contain">
-            <a class='icon pin-right py1 dark-link caret-right'>▸</a>
-            <span class='code strong strong truncate'>constructor(props)</span>
-        </div>
-      </div>
-      <div class="clearfix display-none toggle-target">
-        <section class='p2 mb2 clearfix bg-white minishadow'>
-
-  
-
-  <p>Creates Stat.</p>
-
-
-  <div class='pre p1 fill-light mt0'>constructor(props: Metadata)</div>
-  
-  
-
-  
-  
-  
-  
-  
-  
-
-  
-    <div class='py1 quiet mt1 prose-big'>Parameters</div>
-    <div class='prose'>
-      
-        <div class='space-bottom0'>
-          <div>
-            <span class='code bold'>props</span> <code class='quiet'>(Metadata)</code>
-	    
-          </div>
-          
-        </div>
-      
-    </div>
-  
-
-  
-
-  
-
-  
-
-  
-
-  
-
-  
-
-  
-</section>
-
-      </div>
-    </div>
-  
     <div class='border-bottom' id='statisfile'>
       <div class="clearfix small pointer toggle-sibling">
         <div class="py1 contain">
@@ -3624,7 +4381,7 @@ If the hardlink reference count reaches 0, the inode is garbage collected.</p>
   <p>Checks if file.</p>
 
 
-  <div class='pre p1 fill-light mt0'>isFile(): <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Boolean">boolean</a></div>
+  <div class='pre p1 fill-light mt0'>isFile(): <a href="https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Boolean">boolean</a></div>
   
   
 
@@ -3642,7 +4399,7 @@ If the hardlink reference count reaches 0, the inode is garbage collected.</p>
   
     
       <div class='py1 quiet mt1 prose-big'>Returns</div>
-      <code><a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Boolean">boolean</a></code>
+      <code><a href="https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Boolean">boolean</a></code>
     
   
 
@@ -3675,7 +4432,7 @@ If the hardlink reference count reaches 0, the inode is garbage collected.</p>
   <p>Checks if directory.</p>
 
 
-  <div class='pre p1 fill-light mt0'>isDirectory(): <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Boolean">boolean</a></div>
+  <div class='pre p1 fill-light mt0'>isDirectory(): <a href="https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Boolean">boolean</a></div>
   
   
 
@@ -3693,7 +4450,7 @@ If the hardlink reference count reaches 0, the inode is garbage collected.</p>
   
     
       <div class='py1 quiet mt1 prose-big'>Returns</div>
-      <code><a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Boolean">boolean</a></code>
+      <code><a href="https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Boolean">boolean</a></code>
     
   
 
@@ -3726,7 +4483,7 @@ If the hardlink reference count reaches 0, the inode is garbage collected.</p>
   <p>Checks if block device.</p>
 
 
-  <div class='pre p1 fill-light mt0'>isBlockDevice(): <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Boolean">boolean</a></div>
+  <div class='pre p1 fill-light mt0'>isBlockDevice(): <a href="https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Boolean">boolean</a></div>
   
   
 
@@ -3744,7 +4501,7 @@ If the hardlink reference count reaches 0, the inode is garbage collected.</p>
   
     
       <div class='py1 quiet mt1 prose-big'>Returns</div>
-      <code><a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Boolean">boolean</a></code>
+      <code><a href="https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Boolean">boolean</a></code>
     
   
 
@@ -3777,7 +4534,7 @@ If the hardlink reference count reaches 0, the inode is garbage collected.</p>
   <p>Checks if character device.</p>
 
 
-  <div class='pre p1 fill-light mt0'>isCharacterDevice(): <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Boolean">boolean</a></div>
+  <div class='pre p1 fill-light mt0'>isCharacterDevice(): <a href="https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Boolean">boolean</a></div>
   
   
 
@@ -3795,7 +4552,7 @@ If the hardlink reference count reaches 0, the inode is garbage collected.</p>
   
     
       <div class='py1 quiet mt1 prose-big'>Returns</div>
-      <code><a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Boolean">boolean</a></code>
+      <code><a href="https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Boolean">boolean</a></code>
     
   
 
@@ -3828,7 +4585,7 @@ If the hardlink reference count reaches 0, the inode is garbage collected.</p>
   <p>Checks if symbolic link.</p>
 
 
-  <div class='pre p1 fill-light mt0'>isSymbolicLink(): <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Boolean">boolean</a></div>
+  <div class='pre p1 fill-light mt0'>isSymbolicLink(): <a href="https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Boolean">boolean</a></div>
   
   
 
@@ -3846,7 +4603,7 @@ If the hardlink reference count reaches 0, the inode is garbage collected.</p>
   
     
       <div class='py1 quiet mt1 prose-big'>Returns</div>
-      <code><a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Boolean">boolean</a></code>
+      <code><a href="https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Boolean">boolean</a></code>
     
   
 
@@ -3879,7 +4636,7 @@ If the hardlink reference count reaches 0, the inode is garbage collected.</p>
   <p>Checks if FIFO.</p>
 
 
-  <div class='pre p1 fill-light mt0'>isFIFO(): <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Boolean">boolean</a></div>
+  <div class='pre p1 fill-light mt0'>isFIFO(): <a href="https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Boolean">boolean</a></div>
   
   
 
@@ -3897,7 +4654,7 @@ If the hardlink reference count reaches 0, the inode is garbage collected.</p>
   
     
       <div class='py1 quiet mt1 prose-big'>Returns</div>
-      <code><a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Boolean">boolean</a></code>
+      <code><a href="https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Boolean">boolean</a></code>
     
   
 
@@ -3930,7 +4687,7 @@ If the hardlink reference count reaches 0, the inode is garbage collected.</p>
   <p>Checks if socket.</p>
 
 
-  <div class='pre p1 fill-light mt0'>isSocket(): <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Boolean">boolean</a></div>
+  <div class='pre p1 fill-light mt0'>isSocket(): <a href="https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Boolean">boolean</a></div>
   
   
 
@@ -3948,7 +4705,7 @@ If the hardlink reference count reaches 0, the inode is garbage collected.</p>
   
     
       <div class='py1 quiet mt1 prose-big'>Returns</div>
-      <code><a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Boolean">boolean</a></code>
+      <code><a href="https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Boolean">boolean</a></code>
     
   
 
@@ -4032,65 +4789,6 @@ If the hardlink reference count reaches 0, the inode is garbage collected.</p>
     <div class='py1 quiet mt1 prose-big'>Instance Members</div>
     <div class="clearfix">
   
-    <div class='border-bottom' id='statconstructor'>
-      <div class="clearfix small pointer toggle-sibling">
-        <div class="py1 contain">
-            <a class='icon pin-right py1 dark-link caret-right'>▸</a>
-            <span class='code strong strong truncate'>constructor(props)</span>
-        </div>
-      </div>
-      <div class="clearfix display-none toggle-target">
-        <section class='p2 mb2 clearfix bg-white minishadow'>
-
-  
-
-  <p>Creates Stat.</p>
-
-
-  <div class='pre p1 fill-light mt0'>constructor(props: Metadata)</div>
-  
-  
-
-  
-  
-  
-  
-  
-  
-
-  
-    <div class='py1 quiet mt1 prose-big'>Parameters</div>
-    <div class='prose'>
-      
-        <div class='space-bottom0'>
-          <div>
-            <span class='code bold'>props</span> <code class='quiet'>(Metadata)</code>
-	    
-          </div>
-          
-        </div>
-      
-    </div>
-  
-
-  
-
-  
-
-  
-
-  
-
-  
-
-  
-
-  
-</section>
-
-      </div>
-    </div>
-  
     <div class='border-bottom' id='statisfile'>
       <div class="clearfix small pointer toggle-sibling">
         <div class="py1 contain">
@@ -4106,7 +4804,7 @@ If the hardlink reference count reaches 0, the inode is garbage collected.</p>
   <p>Checks if file.</p>
 
 
-  <div class='pre p1 fill-light mt0'>isFile(): <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Boolean">boolean</a></div>
+  <div class='pre p1 fill-light mt0'>isFile(): <a href="https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Boolean">boolean</a></div>
   
   
 
@@ -4124,7 +4822,7 @@ If the hardlink reference count reaches 0, the inode is garbage collected.</p>
   
     
       <div class='py1 quiet mt1 prose-big'>Returns</div>
-      <code><a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Boolean">boolean</a></code>
+      <code><a href="https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Boolean">boolean</a></code>
     
   
 
@@ -4157,7 +4855,7 @@ If the hardlink reference count reaches 0, the inode is garbage collected.</p>
   <p>Checks if directory.</p>
 
 
-  <div class='pre p1 fill-light mt0'>isDirectory(): <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Boolean">boolean</a></div>
+  <div class='pre p1 fill-light mt0'>isDirectory(): <a href="https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Boolean">boolean</a></div>
   
   
 
@@ -4175,7 +4873,7 @@ If the hardlink reference count reaches 0, the inode is garbage collected.</p>
   
     
       <div class='py1 quiet mt1 prose-big'>Returns</div>
-      <code><a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Boolean">boolean</a></code>
+      <code><a href="https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Boolean">boolean</a></code>
     
   
 
@@ -4208,7 +4906,7 @@ If the hardlink reference count reaches 0, the inode is garbage collected.</p>
   <p>Checks if block device.</p>
 
 
-  <div class='pre p1 fill-light mt0'>isBlockDevice(): <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Boolean">boolean</a></div>
+  <div class='pre p1 fill-light mt0'>isBlockDevice(): <a href="https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Boolean">boolean</a></div>
   
   
 
@@ -4226,7 +4924,7 @@ If the hardlink reference count reaches 0, the inode is garbage collected.</p>
   
     
       <div class='py1 quiet mt1 prose-big'>Returns</div>
-      <code><a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Boolean">boolean</a></code>
+      <code><a href="https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Boolean">boolean</a></code>
     
   
 
@@ -4259,7 +4957,7 @@ If the hardlink reference count reaches 0, the inode is garbage collected.</p>
   <p>Checks if character device.</p>
 
 
-  <div class='pre p1 fill-light mt0'>isCharacterDevice(): <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Boolean">boolean</a></div>
+  <div class='pre p1 fill-light mt0'>isCharacterDevice(): <a href="https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Boolean">boolean</a></div>
   
   
 
@@ -4277,7 +4975,7 @@ If the hardlink reference count reaches 0, the inode is garbage collected.</p>
   
     
       <div class='py1 quiet mt1 prose-big'>Returns</div>
-      <code><a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Boolean">boolean</a></code>
+      <code><a href="https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Boolean">boolean</a></code>
     
   
 
@@ -4310,7 +5008,7 @@ If the hardlink reference count reaches 0, the inode is garbage collected.</p>
   <p>Checks if symbolic link.</p>
 
 
-  <div class='pre p1 fill-light mt0'>isSymbolicLink(): <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Boolean">boolean</a></div>
+  <div class='pre p1 fill-light mt0'>isSymbolicLink(): <a href="https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Boolean">boolean</a></div>
   
   
 
@@ -4328,7 +5026,7 @@ If the hardlink reference count reaches 0, the inode is garbage collected.</p>
   
     
       <div class='py1 quiet mt1 prose-big'>Returns</div>
-      <code><a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Boolean">boolean</a></code>
+      <code><a href="https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Boolean">boolean</a></code>
     
   
 
@@ -4361,7 +5059,7 @@ If the hardlink reference count reaches 0, the inode is garbage collected.</p>
   <p>Checks if FIFO.</p>
 
 
-  <div class='pre p1 fill-light mt0'>isFIFO(): <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Boolean">boolean</a></div>
+  <div class='pre p1 fill-light mt0'>isFIFO(): <a href="https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Boolean">boolean</a></div>
   
   
 
@@ -4379,7 +5077,7 @@ If the hardlink reference count reaches 0, the inode is garbage collected.</p>
   
     
       <div class='py1 quiet mt1 prose-big'>Returns</div>
-      <code><a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Boolean">boolean</a></code>
+      <code><a href="https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Boolean">boolean</a></code>
     
   
 
@@ -4412,7 +5110,7 @@ If the hardlink reference count reaches 0, the inode is garbage collected.</p>
   <p>Checks if socket.</p>
 
 
-  <div class='pre p1 fill-light mt0'>isSocket(): <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Boolean">boolean</a></div>
+  <div class='pre p1 fill-light mt0'>isSocket(): <a href="https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Boolean">boolean</a></div>
   
   
 
@@ -4430,7 +5128,7 @@ If the hardlink reference count reaches 0, the inode is garbage collected.</p>
   
     
       <div class='py1 quiet mt1 prose-big'>Returns</div>
-      <code><a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Boolean">boolean</a></code>
+      <code><a href="https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Boolean">boolean</a></code>
     
   
 
@@ -4520,7 +5218,7 @@ If the hardlink reference count reaches 0, the inode is garbage collected.</p>
   <p>Class representing a ReadStream.</p>
 
 
-  <div class='pre p1 fill-light mt0'>new ReadStream(path: <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String">string</a>, options: <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object">Object</a>, fs: <a href="#virtualfs">VirtualFS</a>)</div>
+  <div class='pre p1 fill-light mt0'>new ReadStream(path: <a href="https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/String">string</a>, options: optionsStream, fs: <a href="#virtualfs">VirtualFS</a>)</div>
   
   
     <p>
@@ -4544,7 +5242,7 @@ If the hardlink reference count reaches 0, the inode is garbage collected.</p>
       
         <div class='space-bottom0'>
           <div>
-            <span class='code bold'>path</span> <code class='quiet'>(<a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String">string</a>)</code>
+            <span class='code bold'>path</span> <code class='quiet'>(<a href="https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/String">string</a>)</code>
 	    
           </div>
           
@@ -4552,80 +5250,7 @@ If the hardlink reference count reaches 0, the inode is garbage collected.</p>
       
         <div class='space-bottom0'>
           <div>
-            <span class='code bold'>options</span> <code class='quiet'>(<a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object">Object</a>)</code>
-	    
-          </div>
-          
-        </div>
-      
-        <div class='space-bottom0'>
-          <div>
-            <span class='code bold'>fs</span> <code class='quiet'>(<a href="#virtualfs">VirtualFS</a>)</code>
-	    
-          </div>
-          
-        </div>
-      
-    </div>
-  
-
-  
-
-  
-
-  
-
-  
-
-  
-
-  
-    <div class='py1 quiet mt1 prose-big'>Instance Members</div>
-    <div class="clearfix">
-  
-    <div class='border-bottom' id='readstreamconstructor'>
-      <div class="clearfix small pointer toggle-sibling">
-        <div class="py1 contain">
-            <a class='icon pin-right py1 dark-link caret-right'>▸</a>
-            <span class='code strong strong truncate'>constructor(path, options, fs)</span>
-        </div>
-      </div>
-      <div class="clearfix display-none toggle-target">
-        <section class='p2 mb2 clearfix bg-white minishadow'>
-
-  
-
-  <p>Creates ReadStream.
-It will asynchronously open the file descriptor if a file path was passed in.
-It will automatically close the opened file descriptor by default.</p>
-
-
-  <div class='pre p1 fill-light mt0'>constructor(path: <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String">string</a>, options: <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object">Object</a>, fs: <a href="#virtualfs">VirtualFS</a>)</div>
-  
-  
-
-  
-  
-  
-  
-  
-  
-
-  
-    <div class='py1 quiet mt1 prose-big'>Parameters</div>
-    <div class='prose'>
-      
-        <div class='space-bottom0'>
-          <div>
-            <span class='code bold'>path</span> <code class='quiet'>(<a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String">string</a>)</code>
-	    
-          </div>
-          
-        </div>
-      
-        <div class='space-bottom0'>
-          <div>
-            <span class='code bold'>options</span> <code class='quiet'>(<a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object">Object</a>)</code>
+            <span class='code bold'>options</span> <code class='quiet'>(optionsStream)</code>
 	    
           </div>
           
@@ -4651,16 +5276,6 @@ It will automatically close the opened file descriptor by default.</p>
   
 
   
-
-  
-
-  
-</section>
-
-      </div>
-    </div>
-  
-</div>
 
   
 
@@ -4686,7 +5301,7 @@ It will automatically close the opened file descriptor by default.</p>
   <p>Class representing a WriteStream.</p>
 
 
-  <div class='pre p1 fill-light mt0'>new WriteStream(path: <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String">string</a>, options: <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object">Object</a>, fs: <a href="#virtualfs">VirtualFS</a>)</div>
+  <div class='pre p1 fill-light mt0'>new WriteStream(path: <a href="https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/String">string</a>, options: optionsStream, fs: <a href="#virtualfs">VirtualFS</a>)</div>
   
   
     <p>
@@ -4710,7 +5325,7 @@ It will automatically close the opened file descriptor by default.</p>
       
         <div class='space-bottom0'>
           <div>
-            <span class='code bold'>path</span> <code class='quiet'>(<a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String">string</a>)</code>
+            <span class='code bold'>path</span> <code class='quiet'>(<a href="https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/String">string</a>)</code>
 	    
           </div>
           
@@ -4718,78 +5333,7 @@ It will automatically close the opened file descriptor by default.</p>
       
         <div class='space-bottom0'>
           <div>
-            <span class='code bold'>options</span> <code class='quiet'>(<a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object">Object</a>)</code>
-	    
-          </div>
-          
-        </div>
-      
-        <div class='space-bottom0'>
-          <div>
-            <span class='code bold'>fs</span> <code class='quiet'>(<a href="#virtualfs">VirtualFS</a>)</code>
-	    
-          </div>
-          
-        </div>
-      
-    </div>
-  
-
-  
-
-  
-
-  
-
-  
-
-  
-
-  
-    <div class='py1 quiet mt1 prose-big'>Instance Members</div>
-    <div class="clearfix">
-  
-    <div class='border-bottom' id='writestreamconstructor'>
-      <div class="clearfix small pointer toggle-sibling">
-        <div class="py1 contain">
-            <a class='icon pin-right py1 dark-link caret-right'>▸</a>
-            <span class='code strong strong truncate'>constructor(path, options, fs)</span>
-        </div>
-      </div>
-      <div class="clearfix display-none toggle-target">
-        <section class='p2 mb2 clearfix bg-white minishadow'>
-
-  
-
-  <p>Creates WriteStream.</p>
-
-
-  <div class='pre p1 fill-light mt0'>constructor(path: <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String">string</a>, options: <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object">Object</a>, fs: <a href="#virtualfs">VirtualFS</a>)</div>
-  
-  
-
-  
-  
-  
-  
-  
-  
-
-  
-    <div class='py1 quiet mt1 prose-big'>Parameters</div>
-    <div class='prose'>
-      
-        <div class='space-bottom0'>
-          <div>
-            <span class='code bold'>path</span> <code class='quiet'>(<a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String">string</a>)</code>
-	    
-          </div>
-          
-        </div>
-      
-        <div class='space-bottom0'>
-          <div>
-            <span class='code bold'>options</span> <code class='quiet'>(<a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object">Object</a>)</code>
+            <span class='code bold'>options</span> <code class='quiet'>(optionsStream)</code>
 	    
           </div>
           
@@ -4815,16 +5359,6 @@ It will automatically close the opened file descriptor by default.</p>
   
 
   
-
-  
-
-  
-</section>
-
-      </div>
-    </div>
-  
-</div>
 
   
 
@@ -4871,58 +5405,6 @@ It will automatically close the opened file descriptor by default.</p>
   
 
   
-
-  
-    <div class='py1 quiet mt1 prose-big'>Instance Members</div>
-    <div class="clearfix">
-  
-    <div class='border-bottom' id='virtualfsconstructor'>
-      <div class="clearfix small pointer toggle-sibling">
-        <div class="py1 contain">
-            <a class='icon pin-right py1 dark-link caret-right'>▸</a>
-            <span class='code strong strong truncate'>constructor()</span>
-        </div>
-      </div>
-      <div class="clearfix display-none toggle-target">
-        <section class='p2 mb2 clearfix bg-white minishadow'>
-
-  
-
-  <p>Creates VirtualFS.</p>
-
-
-  <div class='pre p1 fill-light mt0'>constructor()</div>
-  
-  
-
-  
-  
-  
-  
-  
-  
-
-  
-
-  
-
-  
-
-  
-
-  
-
-  
-
-  
-
-  
-</section>
-
-      </div>
-    </div>
-  
-</div>
 
   
 
@@ -4948,7 +5430,7 @@ It will automatically close the opened file descriptor by default.</p>
   <p>Class representing a virtual filesystem.</p>
 
 
-  <div class='pre p1 fill-light mt0'>new VirtualFS()</div>
+  <div class='pre p1 fill-light mt0'>new VirtualFS(umask: <a href="https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a>, rootIndex: (<a href="https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a> | null), devMgr: DeviceManager, iNodeMgr: <a href="#inodemanager">INodeManager</a>, fdMgr: <a href="#filedescriptormanager">FileDescriptorManager</a>)</div>
   
   
 
@@ -4960,68 +5442,66 @@ It will automatically close the opened file descriptor by default.</p>
   
 
   
-
-  
-
-  
-
-  
-
-  
-
-  
-
-  
-    <div class='py1 quiet mt1 prose-big'>Instance Members</div>
-    <div class="clearfix">
-  
-    <div class='border-bottom' id='virtualfsconstructor'>
-      <div class="clearfix small pointer toggle-sibling">
-        <div class="py1 contain">
-            <a class='icon pin-right py1 dark-link caret-right'>▸</a>
-            <span class='code strong strong truncate'>constructor()</span>
+    <div class='py1 quiet mt1 prose-big'>Parameters</div>
+    <div class='prose'>
+      
+        <div class='space-bottom0'>
+          <div>
+            <span class='code bold'>umask</span> <code class='quiet'>(<a href="https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a>
+            = <code>0o022</code>)</code>
+	    
+          </div>
+          
         </div>
-      </div>
-      <div class="clearfix display-none toggle-target">
-        <section class='p2 mb2 clearfix bg-white minishadow'>
-
-  
-
-  <p>Creates VirtualFS.</p>
-
-
-  <div class='pre p1 fill-light mt0'>constructor()</div>
-  
-  
-
-  
-  
-  
-  
-  
-  
-
-  
-
-  
-
-  
-
-  
-
-  
-
-  
-
-  
-
-  
-</section>
-
-      </div>
+      
+        <div class='space-bottom0'>
+          <div>
+            <span class='code bold'>rootIndex</span> <code class='quiet'>((<a href="https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a> | null)
+            = <code>null</code>)</code>
+	    
+          </div>
+          
+        </div>
+      
+        <div class='space-bottom0'>
+          <div>
+            <span class='code bold'>devMgr</span> <code class='quiet'>(DeviceManager
+            = <code>new DeviceManager()</code>)</code>
+	    
+          </div>
+          
+        </div>
+      
+        <div class='space-bottom0'>
+          <div>
+            <span class='code bold'>iNodeMgr</span> <code class='quiet'>(<a href="#inodemanager">INodeManager</a>
+            = <code>new INodeManager(devMgr)</code>)</code>
+	    
+          </div>
+          
+        </div>
+      
+        <div class='space-bottom0'>
+          <div>
+            <span class='code bold'>fdMgr</span> <code class='quiet'>(<a href="#filedescriptormanager">FileDescriptorManager</a>
+            = <code>new FileDescriptorManager(iNodeMgr)</code>)</code>
+	    
+          </div>
+          
+        </div>
+      
     </div>
   
-</div>
+
+  
+
+  
+
+  
+
+  
+
+  
 
   
 
@@ -5036,90 +5516,57 @@ It will automatically close the opened file descriptor by default.</p>
   
   <div class='clearfix'>
     
-    <h3 class='fl m0' id='virtualfs'>
-      VirtualFS
+    <h3 class='fl m0' id='callbackup'>
+      callbackUp
     </h3>
     
     
   </div>
   
 
-  
+  <p>Asynchronous callback backup.</p>
 
-  <div class='pre p1 fill-light mt0'>VirtualFS</div>
-  
-  
 
+  <div class='pre p1 fill-light mt0'>callbackUp</div>
   
+    <p>
+      Type:
+      callback
+    </p>
   
-  
-  
-  
-  
-
   
 
   
-
+  
+  
+  
+  
   
 
   
-
-  
-
-  
-
-  
-    <div class='py1 quiet mt1 prose-big'>Instance Members</div>
-    <div class="clearfix">
-  
-    <div class='border-bottom' id='virtualfsconstructor'>
-      <div class="clearfix small pointer toggle-sibling">
-        <div class="py1 contain">
-            <a class='icon pin-right py1 dark-link caret-right'>▸</a>
-            <span class='code strong strong truncate'>constructor()</span>
+    <div class='py1 quiet mt1 prose-big'>Parameters</div>
+    <div class='prose'>
+      
+        <div class='space-bottom0'>
+          <div>
+            <span class='code bold'>err</span> <code class='quiet'>(any)</code>
+	    
+          </div>
+          
         </div>
-      </div>
-      <div class="clearfix display-none toggle-target">
-        <section class='p2 mb2 clearfix bg-white minishadow'>
-
-  
-
-  <p>Creates VirtualFS.</p>
-
-
-  <div class='pre p1 fill-light mt0'>constructor()</div>
-  
-  
-
-  
-  
-  
-  
-  
-  
-
-  
-
-  
-
-  
-
-  
-
-  
-
-  
-
-  
-
-  
-</section>
-
-      </div>
+      
     </div>
   
-</div>
+
+  
+
+  
+
+  
+
+  
+
+  
 
   
 
@@ -5145,13 +5592,13 @@ It will automatically close the opened file descriptor by default.</p>
   <p>Class representing a file system error.</p>
 
 
-  <div class='pre p1 fill-light mt0'>new VirtualFSError(errorSys: any, path: any, dest: any, syscall: any)</div>
+  <div class='pre p1 fill-light mt0'>new VirtualFSError(errnoObj: {errno: <a href="https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a>, code: <a href="https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/String">string</a>, description: <a href="https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/String">string</a>}, path: <a href="https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/String">string</a>?, dest: <a href="https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/String">string</a>?, syscall: <a href="https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/String">string</a>?)</div>
   
   
     <p>
       Extends
       
-        <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Error">Error</a>
+        <a href="https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Error">Error</a>
       
     </p>
   
@@ -5169,7 +5616,7 @@ It will automatically close the opened file descriptor by default.</p>
       
         <div class='space-bottom0'>
           <div>
-            <span class='code bold'>errorSys</span> <code class='quiet'>(any)</code>
+            <span class='code bold'>errnoObj</span> <code class='quiet'>({errno: <a href="https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a>, code: <a href="https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/String">string</a>, description: <a href="https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/String">string</a>})</code>
 	    
           </div>
           
@@ -5177,8 +5624,7 @@ It will automatically close the opened file descriptor by default.</p>
       
         <div class='space-bottom0'>
           <div>
-            <span class='code bold'>path</span> <code class='quiet'>(any
-            = <code>null</code>)</code>
+            <span class='code bold'>path</span> <code class='quiet'>(<a href="https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/String">string</a>?)</code>
 	    
           </div>
           
@@ -5186,8 +5632,7 @@ It will automatically close the opened file descriptor by default.</p>
       
         <div class='space-bottom0'>
           <div>
-            <span class='code bold'>dest</span> <code class='quiet'>(any
-            = <code>null</code>)</code>
+            <span class='code bold'>dest</span> <code class='quiet'>(<a href="https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/String">string</a>?)</code>
 	    
           </div>
           
@@ -5195,90 +5640,7 @@ It will automatically close the opened file descriptor by default.</p>
       
         <div class='space-bottom0'>
           <div>
-            <span class='code bold'>syscall</span> <code class='quiet'>(any
-            = <code>null</code>)</code>
-	    
-          </div>
-          
-        </div>
-      
-    </div>
-  
-
-  
-
-  
-
-  
-
-  
-
-  
-
-  
-    <div class='py1 quiet mt1 prose-big'>Instance Members</div>
-    <div class="clearfix">
-  
-    <div class='border-bottom' id='virtualfserrorconstructor'>
-      <div class="clearfix small pointer toggle-sibling">
-        <div class="py1 contain">
-            <a class='icon pin-right py1 dark-link caret-right'>▸</a>
-            <span class='code strong strong truncate'>constructor(errorSys, path, dest, syscall)</span>
-        </div>
-      </div>
-      <div class="clearfix display-none toggle-target">
-        <section class='p2 mb2 clearfix bg-white minishadow'>
-
-  
-
-  <p>Creates VirtualFSError.</p>
-
-
-  <div class='pre p1 fill-light mt0'>constructor(errorSys: any, path: any, dest: any, syscall: any)</div>
-  
-  
-
-  
-  
-  
-  
-  
-  
-
-  
-    <div class='py1 quiet mt1 prose-big'>Parameters</div>
-    <div class='prose'>
-      
-        <div class='space-bottom0'>
-          <div>
-            <span class='code bold'>errorSys</span> <code class='quiet'>(any)</code>
-	    
-          </div>
-          
-        </div>
-      
-        <div class='space-bottom0'>
-          <div>
-            <span class='code bold'>path</span> <code class='quiet'>(any
-            = <code>null</code>)</code>
-	    
-          </div>
-          
-        </div>
-      
-        <div class='space-bottom0'>
-          <div>
-            <span class='code bold'>dest</span> <code class='quiet'>(any
-            = <code>null</code>)</code>
-	    
-          </div>
-          
-        </div>
-      
-        <div class='space-bottom0'>
-          <div>
-            <span class='code bold'>syscall</span> <code class='quiet'>(any
-            = <code>null</code>)</code>
+            <span class='code bold'>syscall</span> <code class='quiet'>(<a href="https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/String">string</a>?)</code>
 	    
           </div>
           
@@ -5302,10 +5664,92 @@ It will automatically close the opened file descriptor by default.</p>
   
 </section>
 
-      </div>
-    </div>
+          
+        
+          
+            <section class='p2 mb2 clearfix bg-white minishadow'>
+
   
-</div>
+  <div class='clearfix'>
+    
+    <h3 class='fl m0' id='virtualfserror'>
+      VirtualFSError
+    </h3>
+    
+    
+  </div>
+  
+
+  
+
+  <div class='pre p1 fill-light mt0'>VirtualFSError</div>
+  
+  
+
+  
+  
+  
+  
+  
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+</section>
+
+          
+        
+          
+            <section class='p2 mb2 clearfix bg-white minishadow'>
+
+  
+  <div class='clearfix'>
+    
+    <h3 class='fl m0' id='virtualfssingleton'>
+      VirtualFSSingleton
+    </h3>
+    
+    
+  </div>
+  
+
+  
+
+  <div class='pre p1 fill-light mt0'>VirtualFSSingleton</div>
+  
+  
+
+  
+  
+  
+  
+  
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
 
   
 

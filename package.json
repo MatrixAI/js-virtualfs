@@ -40,7 +40,7 @@
     "babel-register": "^6.26.0",
     "bl": "^1.0.0",
     "buffer": "^5.0.8",
-    "documentation": "^5.3.3",
+    "documentation": "^5.3.5",
     "events": "^1.1.1",
     "path": "^0.12.7",
     "process": "^0.11.10",
@@ -54,7 +54,7 @@
     "errno": "^0.1.4",
     "permaproxy": "0.0.2",
     "readable-stream": "^2.3.3",
-    "resource-counter": "^0.3.1",
+    "resource-counter": "^1.2.2",
     "secure-random-bytes": "^1.0.1"
   }
 }
