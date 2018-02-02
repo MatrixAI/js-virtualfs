@@ -54,7 +54,7 @@
     "errno": "^0.1.4",
     "permaproxy": "0.0.2",
     "readable-stream": "^2.3.3",
-    "resource-counter": "^1.2.2",
+    "resource-counter": "^1.2.3",
     "secure-random-bytes": "^1.0.1"
   }
 }
