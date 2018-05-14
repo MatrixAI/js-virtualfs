@@ -6835,7 +6835,7 @@ var _inherits = unwrapExports$$1(inherits);
 
 var bitset = createCommonjsModule$$1(function (module, exports) {
 /**
- * @license BitSet.js v4.0.1 14/08/2015
+ * @license BitSet.js v5.0.3 4/3/2018
  * http://www.xarg.org/2014/03/javascript-bit-array/
  *
  * Copyright (c) 2016, Robert Eisele (robert@xarg.org)
@@ -6854,7 +6854,7 @@ var bitset = createCommonjsModule$$1(function (module, exports) {
 
   /**
    * Calculates the number of set bits
-   * 
+   *
    * @param {number} v
    * @returns {number}
    */
@@ -6877,12 +6877,10 @@ var bitset = createCommonjsModule$$1(function (module, exports) {
   function divide(arr, B) {
 
     var r = 0;
-    var d;
-    var i = 0;
 
-    for (; i < arr.length; i++) {
+    for (var i = 0; i < arr.length; i++) {
       r *= 2;
-      d = (arr[i] + r) / B | 0;
+      var d = (arr[i] + r) / B | 0;
       r = (arr[i] + r) % B;
       arr[i] = d;
     }
@@ -6912,7 +6910,7 @@ var bitset = createCommonjsModule$$1(function (module, exports) {
     switch (typeof val) {
 
       case 'number':
-        P['data'] = [val | 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+        P['data'] = [val | 0];
         P['_'] = 0;
         break;
 
@@ -6943,7 +6941,7 @@ var bitset = createCommonjsModule$$1(function (module, exports) {
             throw SyntaxError('Invalid param');
           }
 
-          P['data'].push(num |  0);
+          P['data'].push(num | 0);
 
           if (a <= 0)
             break;
@@ -6955,14 +6953,14 @@ var bitset = createCommonjsModule$$1(function (module, exports) {
         break;
 
       default:
-        
+
         P['data'] = [0];
         var data = P['data'];
 
         if (val instanceof Array) {
 
           for (var i = val.length - 1; i >= 0; i--) {
-            
+
             var ndx = val[i];
 
             if (ndx === Infinity) {
@@ -7021,13 +7019,13 @@ var bitset = createCommonjsModule$$1(function (module, exports) {
     var v = dst['_'];
 
     for (var i = d.length; l >= i; l--) {
-      d[l] = v;
+      d.push(v);
     }
   }
 
   var P = {
-    'data': [],
-    '_': 0
+    'data': [], // Holds the actual bits in form of a 32bit integer array.
+    '_': 0 // Holds the MSB flag information to make indefinitely large bitsets inversion-proof
   };
 
   BitSet.prototype = {
@@ -7081,6 +7079,28 @@ var bitset = createCommonjsModule$$1(function (module, exports) {
       return (d[n] >>> ndx) & 1;
     },
     /**
+     * Creates the bitwise NOT of a set. The result is stored in-place.
+     *
+     * Ex:
+     * bs1 = new BitSet(10);
+     *
+     * bs1.not();
+     *
+     * @returns {BitSet} this
+     */
+    'not': function() { // invert()
+
+      var t = this['clone']();
+      var d = t['data'];
+      for (var i = 0; i < d.length; i++) {
+        d[i] = ~d[i];
+      }
+
+      t['_'] = ~t['_'];
+
+      return t;
+    },
+    /**
      * Creates the bitwise AND of two sets. The result is stored in-place.
      *
      * Ex:
@@ -7096,28 +7116,34 @@ var bitset = createCommonjsModule$$1(function (module, exports) {
 
       parse(P, value);
 
-      var t = this['data'];
+      var T = this['clone']();
+      var t = T['data'];
       var p = P['data'];
 
+      var pl = p.length;
       var p_ = P['_'];
+      var t_ = T['_'];
 
-      var pl = p.length - 1;
-      var tl = t.length - 1;
-
-      if (p_ == 0) {
-        // clear any bits set:
-        for (var i = tl; i > pl; i--) {
-          t[i] = 0;
-        }
+      // If this is infinite, we need all bits from P
+      if (t_ !== 0) {
+        scale(T, pl * WORD_LENGTH - 1);
       }
 
-      for (; i >= 0; i--) {
+      var tl = t.length;
+      var l = Math.min(pl, tl);
+      var i = 0;
+
+      for (; i < l; i++) {
         t[i] &= p[i];
       }
 
-      this['_'] &= P['_'];
+      for (; i < tl; i++) {
+        t[i] &= p_;
+      }
 
-      return this;
+      T['_'] &= p_;
+
+      return T;
     },
     /**
      * Creates the bitwise OR of two sets. The result is stored in-place.
@@ -7135,47 +7161,27 @@ var bitset = createCommonjsModule$$1(function (module, exports) {
 
       parse(P, val);
 
-      var t = this['data'];
+      var t = this['clone']();
+      var d = t['data'];
       var p = P['data'];
 
       var pl = p.length - 1;
-      var tl = t.length - 1;
+      var tl = d.length - 1;
 
       var minLength = Math.min(tl, pl);
 
       // Append backwards, extend array only once
       for (var i = pl; i > minLength; i--) {
-        t[i] = p[i];
+        d[i] = p[i];
       }
 
       for (; i >= 0; i--) {
-        t[i] |= p[i];
+        d[i] |= p[i];
       }
 
-      this['_'] |= P['_'];
+      t['_'] |= P['_'];
 
-      return this;
-    },
-    /**
-     * Creates the bitwise NOT of a set. The result is stored in-place.
-     *
-     * Ex:
-     * bs1 = new BitSet(10);
-     *
-     * bs1.not();
-     *
-     * @returns {BitSet} this
-     */
-    'not': function() { // invert()
-
-      var d = this['data'];
-      for (var i = 0; i < d.length; i++) {
-        d[i] = ~d[i];
-      }
-
-      this['_'] = ~this['_'];
-
-      return this;
+      return t;
     },
     /**
      * Creates the bitwise XOR of two sets. The result is stored in-place.
@@ -7193,36 +7199,53 @@ var bitset = createCommonjsModule$$1(function (module, exports) {
 
       parse(P, val);
 
-      var t = this['data'];
+      var t = this['clone']();
+      var d = t['data'];
       var p = P['data'];
 
-      var t_ = this['_'];
+      var t_ = t['_'];
       var p_ = P['_'];
 
       var i = 0;
 
-      var tl = t.length - 1;
+      var tl = d.length - 1;
       var pl = p.length - 1;
 
       // Cut if tl > pl
       for (i = tl; i > pl; i--) {
-        t[i] ^= p_;
+        d[i] ^= p_;
       }
 
       // Cut if pl > tl
       for (i = pl; i > tl; i--) {
-        t[i] = t_ ^ p[i];
+        d[i] = t_ ^ p[i];
       }
 
       // XOR the rest
       for (; i >= 0; i--) {
-        t[i] ^= p[i];
+        d[i] ^= p[i];
       }
 
       // XOR infinity
-      this['_'] ^= p_;
+      t['_'] ^= p_;
 
-      return this;
+      return t;
+    },
+    /**
+     * Creates the bitwise AND NOT (not confuse with NAND!) of two sets. The result is stored in-place.
+     *
+     * Ex:
+     * bs1 = new BitSet(10);
+     * bs2 = new BitSet(10);
+     *
+     * bs1.notAnd(bs2);
+     *
+     * @param {BitSet} val A bitset object
+     * @returns {BitSet} this
+     */
+    'andNot': function(val) { // difference
+
+      return this['and'](new BitSet(val)['flip']());
     },
     /**
      * Flip/Invert a range of bits by setting
@@ -7241,17 +7264,20 @@ var bitset = createCommonjsModule$$1(function (module, exports) {
 
       if (from === undefined) {
 
-        return this['not']();
+        var d = this['data'];
+        for (var i = 0; i < d.length; i++) {
+          d[i] = ~d[i];
+        }
+
+        this['_'] = ~this['_'];
 
       } else if (to === undefined) {
-
-        from |= 0;
 
         scale(this, from);
 
         this['data'][from >>> WORD_LOG] ^= (1 << from);
 
-      } else if (from <= to && 0 <= from) {
+      } else if (0 <= from && from <= to) {
 
         scale(this, to);
 
@@ -7259,37 +7285,6 @@ var bitset = createCommonjsModule$$1(function (module, exports) {
           this['data'][i >>> WORD_LOG] ^= (1 << i);
         }
       }
-      return this;
-    },
-    /**
-     * Creates the bitwise AND NOT (not confuse with NAND!) of two sets. The result is stored in-place.
-     *
-     * Ex:
-     * bs1 = new BitSet(10);
-     * bs2 = new BitSet(10);
-     *
-     * bs1.notAnd(bs2);
-     *
-     * @param {BitSet} val A bitset object
-     * @returns {BitSet} this
-     */
-    'andNot': function(val) { // difference
-
-      parse(P, val);
-
-      var t = this['data'];
-      var p = P['data'];
-
-      var t_ = this['_'];
-      var p_ = P['_'];
-
-      var l = Math.min(t.length, p.length);
-
-      for (var k = 0; k < l; k++) {
-        t[k] &= ~p[k];
-      }
-      this['_'] &= ~p_;
-
       return this;
     },
     /**
@@ -7414,7 +7409,7 @@ var bitset = createCommonjsModule$$1(function (module, exports) {
     },
     /**
      * Gets a list of set bits
-     * 
+     *
      * @returns {Array|number}
      */
     'toArray': Math['clz32'] ?
@@ -7491,7 +7486,7 @@ var bitset = createCommonjsModule$$1(function (module, exports) {
 
           if (ret !== '') {
             // Fill small positive numbers with leading zeros. The +1 for array creation is added outside already
-            ret += new Array(len - tmp.length).join('0');
+            ret += '0'.repeat(len - tmp.length - 1);
           }
           ret += tmp;
         }
@@ -7513,7 +7508,7 @@ var bitset = createCommonjsModule$$1(function (module, exports) {
       } else {
 
         if ((2 > base || base > 36))
-          throw 'Invalid base';
+          throw SyntaxError('Invalid base');
 
         var ret = [];
         var arr = [];
@@ -7724,8 +7719,9 @@ var bitset = createCommonjsModule$$1(function (module, exports) {
       }
 
       var minLength = tl < pl ? tl : pl;
+      var i = 0;
 
-      for (var i = 0; i <= minLength; i++) {
+      for (; i <= minLength; i++) {
         if (t[i] !== p[i])
           return false;
       }
@@ -7743,14 +7739,44 @@ var bitset = createCommonjsModule$$1(function (module, exports) {
     }
   };
 
-  BitSet.fromBinaryString = function(str) {
+  BitSet['fromBinaryString'] = function(str) {
 
     return new BitSet('0b' + str);
   };
 
-  BitSet.fromHexString = function(str) {
+  BitSet['fromHexString'] = function(str) {
 
     return new BitSet('0x' + str);
+  };
+
+  BitSet['Random'] = function(n) {
+
+    if (n === undefined || n < 0) {
+      n = WORD_LENGTH;
+    }
+
+    var m = n % WORD_LENGTH;
+
+    // Create an array, large enough to hold the random bits
+    var t = [];
+    var len = Math.ceil(n / WORD_LENGTH);
+
+    // Create an bitset instance
+    var s = Object.create(BitSet.prototype);
+
+    // Fill the vector with random data, uniformally distributed
+    for (var i = 0; i < len; i++) {
+      t.push(Math.random() * 4294967296 | 0);
+    }
+
+    // Mask out unwanted bits
+    if (m > 0) {
+      t[len - 1] &= (1 << m) - 1;
+    }
+
+    s['data'] = t;
+    s['_'] = 0;
+    return s;
   };
 
   if (typeof undefined === 'function' && undefined['amd']) {
@@ -7758,11 +7784,16 @@ var bitset = createCommonjsModule$$1(function (module, exports) {
       return BitSet;
     });
   } else {
+    Object.defineProperty(exports, "__esModule", {'value': true});
+    BitSet['default'] = BitSet;
+    BitSet['BitSet'] = BitSet;
     module['exports'] = BitSet;
   }
 
 })(commonjsGlobal$$1);
 });
+
+var BitSet = unwrapExports$$1(bitset);
 
 /** @module bitMap */
 
@@ -7778,7 +7809,7 @@ var bitset = createCommonjsModule$$1(function (module, exports) {
  * Creates a new bitmap sized according to the block size
  */
 function createBitMap(blockSize) {
-  return new bitset(new Uint8Array(blockSize / 8 - 1)).flip(0, blockSize - 1);
+  return new BitSet(new Uint8Array(blockSize / 8 - 1)).flip(0, blockSize - 1);
 }
 
 /**
