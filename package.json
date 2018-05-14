@@ -51,9 +51,9 @@
   },
   "dependencies": {
     "babel-runtime": "^6.26.0",
-    "errno": "^0.1.4",
+    "errno": "^0.1.7",
     "permaproxy": "0.0.2",
-    "readable-stream": "^2.3.3",
+    "readable-stream": "^2.3.6",
     "resource-counter": "^1.2.4",
     "secure-random-bytes": "^1.0.1"
   }
