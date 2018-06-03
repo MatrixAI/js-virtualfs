@@ -70,12 +70,15 @@ npm version <update_type>
 npm publish
 ```
 
-The browser target makes use of these polyfill `devDependencies`:
+The browser target makes use of these polyfills:
 
 * buffer - Used everywhere.
 * events - Used by streams dependency.
 * path - Used for `join`.
 * process - Used for `nextTick` and `stdin` and `stdout` streams.
+* stream - Used for filesystem streaming
+
+They are currently supplied through Rollup plugins.
 
 Todo
 -----
