@@ -2,6 +2,8 @@ import fs from 'fs';
 import babel from 'rollup-plugin-babel';
 import resolve from 'rollup-plugin-node-resolve';
 import commonjs from 'rollup-plugin-commonjs';
+import globals from 'rollup-plugin-node-globals';
+import builtins from 'rollup-plugin-node-builtins';
 
 const packageJson = JSON.parse(fs.readFileSync('./package.json', 'utf8'));
 
@@ -16,7 +18,14 @@ export default [
       return Object.keys(packageJson.dependencies)
         .concat(Object.keys(packageJson.devDependencies))
         .map((dep) => new RegExp('^' + dep))
-        .concat([/^babel-runtime/])
+        .concat([
+            /^babel-runtime/,
+            /^buffer/,
+            /^events/,
+            /^process/,
+            /^path/,
+            /^stream/
+        ])
         .some((pattern) => pattern.test(id));
     },
     plugins: [
@@ -47,7 +56,14 @@ export default [
       return Object.keys(packageJson.dependencies)
         .concat(Object.keys(packageJson.devDependencies))
         .map((dep) => new RegExp('^' + dep))
-        .concat([/^babel-runtime/])
+        .concat([
+            /^babel-runtime/,
+            /^buffer/,
+            /^events/,
+            /^process/,
+            /^path/,
+            /^stream/
+        ])
         .some((pattern) => pattern.test(id));
     },
     plugins: [
@@ -80,7 +96,11 @@ export default [
         babelrc: false,
         exclude: 'node_modules/**',
         runtimeHelpers: true,
-        plugins: ['transform-object-rest-spread', 'transform-runtime', 'transform-class-properties'],
+        plugins: [
+          'transform-object-rest-spread',
+          'transform-runtime',
+          'transform-class-properties'
+        ],
         presets: [
           'flow',
           ['env', {
@@ -92,14 +112,12 @@ export default [
         ]
       }),
       resolve({
-        preferBuiltins: false,
+        preferBuiltins: true,
         browser: true
       }),
-      commonjs({
-        namedExports: {
-          'node_modules/process/browser.js': ['nextTick']
-        }
-      })
+      commonjs(),
+      globals(),
+      builtins()
     ]
   }
 ];
