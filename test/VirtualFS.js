@@ -114,6 +114,50 @@ test.cb('asynchronous errors are passed to callbacks - async', t => {
   });
 });
 
+///////////////
+// stat type //
+///////////////
+
+test('file stat makes sense - sync', t => {
+  const fs = new VirtualFS;
+  fs.writeFileSync('/test', 'test data');
+  const stat = fs.statSync('/test');
+  t.true(stat.isFile());
+  t.false(stat.isDirectory());
+  t.false(stat.isBlockDevice());
+  t.false(stat.isCharacterDevice());
+  t.false(stat.isSocket());
+  t.false(stat.isSymbolicLink());
+  t.false(stat.isFIFO());
+});
+
+test('dir stat makes sense - sync', t => {
+  const fs = new VirtualFS;
+  fs.mkdirSync('/dir');
+  const stat = fs.statSync('/dir');
+  t.false(stat.isFile());
+  t.true(stat.isDirectory());
+  t.false(stat.isBlockDevice());
+  t.false(stat.isCharacterDevice());
+  t.false(stat.isSocket());
+  t.false(stat.isSymbolicLink());
+  t.false(stat.isFIFO());
+});
+
+test('symlink stat makes sense - sync', t => {
+  const fs = new VirtualFS;
+  fs.writeFileSync('/a', 'data');
+  fs.symlinkSync('/a', '/link-to-a');
+  const stat = fs.lstatSync('/link-to-a');
+  t.false(stat.isFile());
+  t.false(stat.isDirectory());
+  t.false(stat.isBlockDevice());
+  t.false(stat.isCharacterDevice());
+  t.false(stat.isSocket());
+  t.true(stat.isSymbolicLink());
+  t.false(stat.isFIFO());
+});
+
 ///////////
 // files //
 ///////////
