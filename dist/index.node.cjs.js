@@ -100,49 +100,49 @@ class Stat {
    * Checks if file.
    */
   isFile() {
-    return !!(this.mode & constants.S_IFREG);
+    return (this.mode & constants.S_IFMT) == constants.S_IFREG;
   }
 
   /**
    * Checks if directory.
    */
   isDirectory() {
-    return !!(this.mode & constants.S_IFDIR);
+    return (this.mode & constants.S_IFMT) == constants.S_IFDIR;
   }
 
   /**
    * Checks if block device.
    */
   isBlockDevice() {
-    return !!(this.mode & constants.S_IFBLK);
+    return (this.mode & constants.S_IFMT) == constants.S_IFBLK;
   }
 
   /**
    * Checks if character device.
    */
   isCharacterDevice() {
-    return !!(this.mode & constants.S_IFCHR);
+    return (this.mode & constants.S_IFMT) == constants.S_IFCHR;
   }
 
   /**
    * Checks if symbolic link.
    */
   isSymbolicLink() {
-    return !!(this.mode & constants.S_IFLNK);
+    return (this.mode & constants.S_IFMT) == constants.S_IFLNK;
   }
 
   /**
    * Checks if FIFO.
    */
   isFIFO() {
-    return !!(this.mode & constants.S_IFIFO);
+    return (this.mode & constants.S_IFMT) == constants.S_IFIFO;
   }
 
   /**
    * Checks if socket.
    */
   isSocket() {
-    return !!(this.mode & constants.S_IFSOCK);
+    return (this.mode & constants.S_IFMT) == constants.S_IFSOCK;
   }
 
 }

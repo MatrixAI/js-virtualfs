@@ -4233,7 +4233,7 @@ var Stat = function () {
   _createClass(Stat, [{
     key: 'isFile',
     value: function isFile() {
-      return !!(this.mode & constants.S_IFREG);
+      return (this.mode & constants.S_IFMT) == constants.S_IFREG;
     }
 
     /**
@@ -4243,7 +4243,7 @@ var Stat = function () {
   }, {
     key: 'isDirectory',
     value: function isDirectory() {
-      return !!(this.mode & constants.S_IFDIR);
+      return (this.mode & constants.S_IFMT) == constants.S_IFDIR;
     }
 
     /**
@@ -4253,7 +4253,7 @@ var Stat = function () {
   }, {
     key: 'isBlockDevice',
     value: function isBlockDevice() {
-      return !!(this.mode & constants.S_IFBLK);
+      return (this.mode & constants.S_IFMT) == constants.S_IFBLK;
     }
 
     /**
@@ -4263,7 +4263,7 @@ var Stat = function () {
   }, {
     key: 'isCharacterDevice',
     value: function isCharacterDevice() {
-      return !!(this.mode & constants.S_IFCHR);
+      return (this.mode & constants.S_IFMT) == constants.S_IFCHR;
     }
 
     /**
@@ -4273,7 +4273,7 @@ var Stat = function () {
   }, {
     key: 'isSymbolicLink',
     value: function isSymbolicLink() {
-      return !!(this.mode & constants.S_IFLNK);
+      return (this.mode & constants.S_IFMT) == constants.S_IFLNK;
     }
 
     /**
@@ -4283,7 +4283,7 @@ var Stat = function () {
   }, {
     key: 'isFIFO',
     value: function isFIFO() {
-      return !!(this.mode & constants.S_IFIFO);
+      return (this.mode & constants.S_IFMT) == constants.S_IFIFO;
     }
 
     /**
@@ -4293,7 +4293,7 @@ var Stat = function () {
   }, {
     key: 'isSocket',
     value: function isSocket() {
-      return !!(this.mode & constants.S_IFSOCK);
+      return (this.mode & constants.S_IFMT) == constants.S_IFSOCK;
     }
   }]);
 
