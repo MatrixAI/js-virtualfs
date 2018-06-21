@@ -1404,6 +1404,57 @@ test('chown changes uid and gid - sync', t => {
   t.is(stat.gid, 2000);
 });
 
+test('chownr changes uid and gid recursively - sync', t => {
+  const fs = new VirtualFS;
+  fs.mkdirSync('/dir');
+  fs.writeFileSync('/dir/a', 'hello');
+  fs.writeFileSync('/dir/b', 'world');
+  fs.chownrSync('/dir', 1000, 2000);
+  let stat;
+  stat = fs.statSync('/dir');
+  t.is(stat.uid, 1000);
+  t.is(stat.gid, 2000);
+  stat = fs.statSync('/dir/a');
+  t.is(stat.uid, 1000);
+  t.is(stat.gid, 2000);
+  stat = fs.statSync('/dir/b');
+  t.is(stat.uid, 1000);
+  t.is(stat.gid, 2000);
+  fs.writeFileSync('/file', 'hello world');
+  fs.chownrSync('/file', 1000, 2000);
+  stat = fs.statSync('/file');
+  t.is(stat.uid, 1000);
+  t.is(stat.gid, 2000);
+});
+
+test.cb('chownr changes uid and gid recursively - async', t => {
+  const fs = new VirtualFS;
+  fs.mkdirSync('/dir');
+  fs.writeFileSync('/dir/a', 'hello');
+  fs.writeFileSync('/dir/b', 'world');
+  let stat;
+  fs.chownr('/dir', 1000, 2000, (err => {
+    t.ifError(err);
+    stat = fs.statSync('/dir');
+    t.is(stat.uid, 1000);
+    t.is(stat.gid, 2000);
+    stat = fs.statSync('/dir/a');
+    t.is(stat.uid, 1000);
+    t.is(stat.gid, 2000);
+    stat = fs.statSync('/dir/b');
+    t.is(stat.uid, 1000);
+    t.is(stat.gid, 2000);
+    fs.writeFileSync('/file', 'hello world');
+    fs.chownr('/file', 1000, 2000, (err) => {
+      t.ifError(err);
+      stat = fs.statSync('/file');
+      t.is(stat.uid, 1000);
+      t.is(stat.gid, 2000);
+      t.end();
+    });
+  }));
+});
+
 test('chmod with 0 wipes out all permissions - sync', t => {
   const fs = new VirtualFS;
   fs.writeFileSync('/a', 'abc');
@@ -1480,7 +1531,7 @@ test('non-root users can only chown uid if they own the file and they are chowni
   fs.chownSync('file', 1000, 2000);
 });
 
-test('chown can change groups without any problem because we do not have a user group hierarchy', t => {
+test('chown can change groups without any problem because we do not have a user group hierarchy - sync', t => {
   const fs = new VirtualFS;
   fs.writeFileSync('file', 'hello');
   fs.chownSync('file', 1000, 1000);
@@ -1490,7 +1541,7 @@ test('chown can change groups without any problem because we do not have a user 
   t.pass();
 });
 
-test('chmod only works if you are the owner of the file', t => {
+test('chmod only works if you are the owner of the file - sync', t => {
   const fs = new VirtualFS;
   fs.writeFileSync('file', 'hello');
   fs.chownSync('file', 1000, 1000);
