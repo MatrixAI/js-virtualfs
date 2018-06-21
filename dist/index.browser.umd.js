@@ -13138,6 +13138,38 @@ var VirtualFS = function () {
       return;
     }
   }, {
+    key: 'chownr',
+    value: function chownr(path, uid, gid) {
+      var callback = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : callbackUp;
+
+      this._callAsync(this.chownrSync.bind(this), [path, uid, gid], callback, callback);
+      return;
+    }
+  }, {
+    key: 'chownrSync',
+    value: function chownrSync(path, uid, gid) {
+      var _this = this;
+
+      path = this._getPath(path);
+      this.chownSync(path, uid, gid);
+      var children = void 0;
+      try {
+        children = this.readdirSync(path);
+      } catch (e) {
+        if (e && e.code === 'ENOTDIR') return;
+        throw e;
+      }
+      children.forEach(function (child) {
+        // $FlowFixMe: path is string
+        var pathChild = pathJoin(path, child);
+        // don't traverse symlinks
+        if (!_this.lstatSync(pathChild).isSymbolicLink()) {
+          _this.chownrSync(pathChild, uid, gid);
+        }
+      });
+      return;
+    }
+  }, {
     key: 'close',
     value: function close(fdIndex) {
       var callback = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : callbackUp;

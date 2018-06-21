@@ -1587,6 +1587,32 @@ class VirtualFS {
     return;
   }
 
+  chownr(path, uid, gid, callback = callbackUp) {
+    this._callAsync(this.chownrSync.bind(this), [path, uid, gid], callback, callback);
+    return;
+  }
+
+  chownrSync(path, uid, gid) {
+    path = this._getPath(path);
+    this.chownSync(path, uid, gid);
+    let children;
+    try {
+      children = this.readdirSync(path);
+    } catch (e) {
+      if (e && e.code === 'ENOTDIR') return;
+      throw e;
+    }
+    children.forEach(child => {
+      // $FlowFixMe: path is string
+      const pathChild = pathJoin(path, child);
+      // don't traverse symlinks
+      if (!this.lstatSync(pathChild).isSymbolicLink()) {
+        this.chownrSync(pathChild, uid, gid);
+      }
+    });
+    return;
+  }
+
   close(fdIndex, callback = callbackUp) {
     this._callAsync(this.closeSync.bind(this), [fdIndex], callback, callback);
     return;
