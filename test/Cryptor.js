@@ -30,7 +30,7 @@ test.serial('Cryptor - encrypt', async t => {
 
 	await cry.init('secret password');
 
-	let ct = await cry.encrypt(plaintext);
+	let ct = await cry.encrypt(plaintext, iv);
 
 	t.notDeepEqual(ct, plaintext);
 	t.true(ct instanceof Buffer);
@@ -45,17 +45,14 @@ test.serial('Cryptor - decrypt', async t => {
 	let cry = new Cryptor;
 	await cry.init('secret password');
 
-	console.log('ciphertext: '  + ciphertext);
 	let plaintext = await cry.decrypt(ciphertext, iv);
-	console.log(plaintext.toString('utf8'));
 	// TODO: literal should be  global var?
 	t.deepEqual(expected, plaintext);
 	t.pass();
 });
 
 
-// test cipher text
-// use deterministic cipher results
+// TODO: use deterministic/concrete control values for testing cipher results
 
 
 // test decrypt
