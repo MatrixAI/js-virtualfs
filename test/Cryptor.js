@@ -2,57 +2,73 @@ import Cryptor from '../lib/Cryptor.js';
 import test from 'ava';
 import crypto from 'crypto';
 
+
 const iv = crypto.randomBytes(16);
-// TODO: better way to share data b/w test?
-var ciphertext;
-// test init behavior
+
 test('Cryptor - initialisation', t => {
-	let cry = new Cryptor;
-	cry.init('secret password');
-	return cry.init('secret password').then( result => {
-		t.true(cry instanceof Cryptor);
-		t.true(cry.isInitialised());
+	let cry = new Cryptor('secret password');
+	t.true(cry instanceof Cryptor);
+});
+
+test.cb('Cryptor - encrypt async', t => {
+	let crySync = new Cryptor('secret password', iv);
+	let cry = new Cryptor('secret password', iv);
+
+	let plaintext = 'very important secret';
+
+	let ctSync = crySync.encryptSync(plaintext);
+	let ct = cry.encrypt(plaintext, (err, ct) => {
+		if (err) {
+			t.fail(err)
+		} else {
+			t.notDeepEqual(ct, plaintext);
+			// cipher same as when using sync fn
+			t.deepEqual(ct, ctSync);
+		}
+		t.end();
 	});
 });
 
-test('Cryptor - not initialisation', t => {
-	let cry = new Cryptor;
-
-	t.true(cry instanceof Cryptor);
-	t.false(cry.isInitialised());
-});
-
-
-// TODO: using serial to share data to decrypts seems like a bad idea.
-test.serial('Cryptor - encrypt', async t => {
-	let cry = new Cryptor;
+test('Cryptor - encrypt sync', t => {
+	let cry = new Cryptor('secret password', iv);
+	let cry2 = new Cryptor('secret password', iv);
 	let plaintext = 'very important secret';
 
-	await cry.init('secret password');
+	let ct = cry.encryptSync(plaintext);
+	let ct2 = cry2.encryptSync(plaintext);
 
-	let ct = await cry.encrypt(plaintext, iv);
-
+	// TODO: we have the iv, passworkd/key, and block mode
+	// the ciphertext can be verfied independenty of this
+	// we should assert it is equal to the cipher from a diff source
 	t.notDeepEqual(ct, plaintext);
-	t.true(ct instanceof Buffer);
-
-	// TODO: set global shared var
-	ciphertext = ct;
+	// same cipher when plaintext encrypted with constance iv
+	t.deepEqual(ct, ct2);
 });
 
+test.cb('Cryptor - decrypt async', t => {
+	let cry = new Cryptor('secret password', iv);
+	let plaintext = 'very important secret';
 
-test.serial('Cryptor - decrypt', async t => {
-	const expected = Buffer('very important secret');
-	let cry = new Cryptor;
-	await cry.init('secret password');
+	let ct = cry.encryptSync(plaintext);
 
-	let plaintext = await cry.decrypt(ciphertext, iv);
-	// TODO: literal should be  global var?
-	t.deepEqual(expected, plaintext);
-	t.pass();
+	cry.decrypt(ct, (err, deciphered) => {
+		if (err) {
+			t.fail(err)
+		} else {
+			t.deepEqual(deciphered.toString(), plaintext);
+		}
+		t.end();
+	});
 });
 
+test('Cryptor - decrypt sync', t => {
+	let cry = new Cryptor('secret password', iv);
+	let plaintext = 'very important secret';
 
-// TODO: use deterministic/concrete control values for testing cipher results
+	let ct = cry.encryptSync(plaintext);
 
+	let deciphered = cry.decryptSync(ct).toString();
 
-// test decrypt
+	t.is(deciphered, plaintext);
+});
+
