@@ -24,6 +24,7 @@ test.cb('Cryptor - encrypt async', t => {
 			t.notDeepEqual(ct, plaintext);
 			// cipher same as when using sync fn
 			t.deepEqual(ct, ctSync);
+			console.log(ct);
 		}
 		t.end();
 	});
