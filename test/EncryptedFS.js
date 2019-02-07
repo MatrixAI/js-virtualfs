@@ -92,7 +92,11 @@ test('write then read - multiple blocks', t => {
 	t.deepEqual(writeBuffer, readBuffer);
 });
 
+
+
 // TODO: this should really be split out into tests only concerning writes and tests only concerning reads
+/* the start and end blocks are handled differently to the middle blocks
+ * hence they all need their own tests to verify functionality */
 test('write non-zero position - middle of start block', t => {
 	let efs = new EFS('very password');
 
@@ -116,17 +120,90 @@ test('write non-zero position - middle of start block', t => {
 	middleData.copy(writeBuffer, writePos);
 	const expected = writeBuffer;
 
-	/*
-	console.log(expected.slice(0, blockSize).toString('hex'));
-	console.log('-------');
-	console.log(readBuffer.slice(0, blockSize).toString('hex'));
-	*/
 
 	t.true(readBuffer.equals(writeBuffer));
 	//t.deepEqual(expected.slice(0, blockSize), readBuffer.slice(0, blockSize));
 });
 
-/* TODO: middle of middle block(s)
- * TODO: middle of last block
- * TODO: single block such that .length < blocksize, .length + writeOffset > blocksize
- */
+test('write non-zero position - middle of middle block', t => {
+	let efs = new EFS('very password');
+
+	const blockSize = 4096;
+
+
+	// write a three block file
+	const writePos = blockSize + 2000;
+	const writeBuffer = crypto.randomBytes(blockSize * 3);
+	const fd = efs.openSync('test/test_middle.txt');
+	efs.writeSync(fd, writeBuffer, 0, writeBuffer.length, 0);
+
+	// write data in the middle
+	const middleData = Buffer('Malcom in the');	
+	efs.writeSync(fd, middleData, 0, middleData.length, writePos);
+
+	// re-read the blocks
+	let readBuffer = Buffer.alloc(blockSize * 3);
+	efs.readSync(fd, readBuffer, 0, readBuffer.length, 0);
+
+	middleData.copy(writeBuffer, writePos);
+	const expected = writeBuffer;
+
+
+	t.true(readBuffer.equals(writeBuffer));
+	//t.deepEqual(expected.slice(0, blockSize), readBuffer.slice(0, blockSize));
+});
+
+test('write non-zero position - middle of end block', t => {
+	let efs = new EFS('very password');
+
+	const blockSize = 4096;
+
+
+	// write a three block file
+	const writePos = 2 * blockSize + 2000;
+	const writeBuffer = crypto.randomBytes(blockSize * 3);
+	const fd = efs.openSync('test/test_middle.txt');
+	efs.writeSync(fd, writeBuffer, 0, writeBuffer.length, 0);
+
+	// write data in the middle
+	const middleData = Buffer('Malcom in the');	
+	efs.writeSync(fd, middleData, 0, middleData.length, writePos);
+
+	// re-read the blocks
+	let readBuffer = Buffer.alloc(blockSize * 3);
+	efs.readSync(fd, readBuffer, 0, readBuffer.length, 0);
+
+	middleData.copy(writeBuffer, writePos);
+	const expected = writeBuffer;
+
+
+	t.true(readBuffer.equals(writeBuffer));
+	//t.deepEqual(expected.slice(0, blockSize), readBuffer.slice(0, blockSize));
+});
+
+test('write segment spanning across two block', t => {
+	let efs = new EFS('very password');
+
+	const blockSize = 4096;
+
+	// write a three block file
+	const writePos = 4090;
+	const writeBuffer = crypto.randomBytes(blockSize * 3);
+	const fd = efs.openSync('test/test_middle.txt');
+	efs.writeSync(fd, writeBuffer, 0, writeBuffer.length, 0);
+
+	// write data in the middle
+	const middleData = Buffer('Malcom in the');	
+	efs.writeSync(fd, middleData, 0, middleData.length, writePos);
+
+	// re-read the blocks
+	let readBuffer = Buffer.alloc(blockSize * 3);
+	efs.readSync(fd, readBuffer, 0, readBuffer.length, 0);
+
+	middleData.copy(writeBuffer, writePos);
+	const expected = writeBuffer;
+
+
+	t.true(readBuffer.equals(writeBuffer));
+});
+
