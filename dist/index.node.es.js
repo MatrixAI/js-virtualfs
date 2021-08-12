@@ -429,27 +429,6 @@ class File extends INode {
     return;
   }
 
-  read() {}
-
-  write(buffer$$1, position, append) {
-    let data = this._data;
-    let bytesWritten;
-    if (append) {
-      data = Buffer$1.concat([data, buffer$$1]);
-      bytesWritten = buffer$$1.length;
-    } else {
-      position = Math.min(data.length, position);
-      const overwrittenLength = data.length - position;
-      const extendedLength = buffer$$1.length - overwrittenLength;
-      if (extendedLength > 0) {
-        data = Buffer$1.concat([data, Buffer$1.allocUnsafe(extendedLength)]);
-      }
-      bytesWritten = buffer$$1.copy(data, position);
-    }
-    this._data = data;
-    return bytesWritten;
-  }
-
   /**
    * Noop.
    */
@@ -560,16 +539,20 @@ class Directory extends INode {
    * Rename a name in this directory.
    */
   renameEntry(oldName, newName) {
-    if (oldName === '.' || oldName === '..' || newName === '.' || oldName === '..') {
+    if (oldName === '.' || oldName === '..' || newName === '.' || newName === '..') {
       throw new Error('Not allowed to rename `.` or `..` entries');
     }
-    const index = this._dir.get(oldName);
-    if (index != null) {
+    const oldIndex = this._dir.get(oldName);
+    if (oldIndex != null) {
       const now = new Date();
       this._metadata.mtime = now;
       this._metadata.ctime = now;
+      const newIndex = this._dir.get(newName);
+      if (newIndex != null) {
+        this._iNodeMgr.unlinkINode(this._iNodeMgr.getINode(newIndex));
+      }
       this._dir.delete(oldName);
-      this._dir.set(newName, index);
+      this._dir.set(newName, oldIndex);
     }
     return;
   }
